@@ -1,0 +1,110 @@
+"use client"
+
+import { useState } from "react"
+import { SendIcon } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
+
+const WINDOW_HOURS = 24
+
+/** Horas que le quedan a la ventana de 24 h, o null si ya cerró. */
+export function windowLeft(lastInboundAt: Date | null, now = new Date()): number | null {
+  if (!lastInboundAt) return null
+  const left = WINDOW_HOURS - (now.getTime() - lastInboundAt.getTime()) / 36e5
+  return left > 0 ? Math.floor(left) : null
+}
+
+export function ConversationItem({
+  name,
+  preview,
+  time,
+  unread,
+  hoursLeft,
+  active,
+  href = "#",
+}: {
+  name: string
+  preview: string
+  time: string
+  unread: number
+  hoursLeft: number | null
+  active?: boolean
+  href?: string
+}) {
+  return (
+    <a
+      href={href}
+      aria-current={active ? "true" : undefined}
+      className={cn(
+        "flex gap-3 rounded-sm px-3 py-2.5 transition-colors hover:bg-muted",
+        active && "bg-muted",
+      )}
+    >
+      <Avatar className="size-8">
+        <AvatarFallback>{name.slice(0, 1).toUpperCase()}</AvatarFallback>
+      </Avatar>
+      <span className="grid min-w-0 flex-1 gap-0.5">
+        <span className="flex items-baseline justify-between gap-2">
+          <span className={cn("truncate", unread ? "font-semibold" : "font-medium")}>{name}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">{time}</span>
+        </span>
+        <span className="truncate text-xs text-muted-foreground">{preview}</span>
+        <span className="flex items-center justify-between gap-2">
+          <span className={cn("text-xs", hoursLeft === null ? "text-muted-foreground" : "text-success")}>
+            {hoursLeft === null ? "Ventana cerrada" : `Ventana abierta · ${hoursLeft} h`}
+          </span>
+          {unread > 0 && (
+            <span className="grid h-5 min-w-5 place-items-center rounded-pill bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+              <span className="sr-only">Sin leer: </span>
+              {unread}
+            </span>
+          )}
+        </span>
+      </span>
+    </a>
+  )
+}
+
+export function Composer({ hoursLeft, onSend }: { hoursLeft: number | null; onSend?: (text: string) => Promise<void> }) {
+  const [text, setText] = useState("")
+  const [sending, setSending] = useState(false)
+  const closed = hoursLeft === null
+  return (
+    <form
+      className="grid gap-2 rounded-md border border-border bg-card p-3"
+      onSubmit={async (e) => {
+        e.preventDefault()
+        if (!text.trim() || closed) return
+        setSending(true)
+        try {
+          await onSend?.(text)
+          setText("")
+        } finally {
+          setSending(false)
+        }
+      }}
+    >
+      {closed && (
+        <p className="text-xs text-muted-foreground" id="composer-closed">
+          Solo puedes responder dentro de las 24 h desde su último mensaje. Cuando te vuelva a escribir, se reabre.
+        </p>
+      )}
+      <div className="flex items-end gap-2">
+        <Textarea
+          aria-label="Mensaje"
+          aria-describedby={closed ? "composer-closed" : undefined}
+          value={text}
+          disabled={closed}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={closed ? "Ventana cerrada" : "Escribe una respuesta…"}
+          className="min-h-10"
+        />
+        <Button type="submit" disabled={closed || !text.trim()} loading={sending} aria-label="Enviar">
+          <SendIcon />
+        </Button>
+      </div>
+    </form>
+  )
+}

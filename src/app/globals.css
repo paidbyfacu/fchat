@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/* Colores, tipografía, radios y sombras: todo sale de tokens.css */
+@import "./tokens.css";
+
+/* Los dark: de shadcn solo aplican con la clase .dark (todavía no hay tema oscuro).
+   Sin esta línea Tailwind los activa con el modo oscuro del sistema. */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Inter servida por next/font (ver layout.tsx) */
+  --tk-font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground text-sm antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--tk-focus);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
