@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { AppSidebar } from "@/components/mc/app-sidebar"
+import { TopNav } from "@/components/mc/top-nav"
+import { logout } from "@/app/(app)/actions"
 import { Banner, EmptyState } from "@/components/mc/feedback"
 import { ConversationItem } from "@/components/mc/inbox"
 import { Funnel, StatTile } from "@/components/mc/stats"
@@ -238,8 +239,8 @@ export default function DesignPage() {
       </Section>
 
       <Section id="nav" title="Navegación">
-        <div className="h-80 overflow-hidden rounded-md shadow-card">
-          <AppSidebar current="/automations" username="tucuenta" />
+        <div className="relative overflow-visible rounded-md shadow-card">
+          <TopNav current="/automations" username="@tucuenta" email="tu@email.com" unread={3} logout={logout} />
         </div>
       </Section>
     </main>

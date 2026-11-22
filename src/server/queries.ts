@@ -121,3 +121,42 @@ export async function recentComments(userId: string, limit = 8) {
     [userId, limit],
   )
 }
+
+/** Mensajes sin leer en las conversaciones abiertas, para el número de la Bandeja en el menú. */
+export async function unreadTotal(userId: string) {
+  const db = await getDb()
+  const [r] = await db.query<{ n: number }>(
+    `select coalesce(sum(c.unread_count), 0)::int n
+     from contacts c join ig_accounts acc on acc.id = c.ig_account_id
+     where acc.user_id = $1 and c.inbox_status = 'open'`,
+    [userId],
+  )
+  return r?.n ?? 0
+}
+
+export type HomeSummary = {
+  accounts: number
+  contacts: number
+  automations: number
+  live: number
+  comments: number
+  humanReplies: number
+}
+
+/** Números del inicio y de «Tus próximos mejores pasos». */
+export async function homeSummary(userId: string): Promise<HomeSummary> {
+  const db = await getDb()
+  const [r] = await db.query<HomeSummary>(
+    `select
+       (select count(*)::int from ig_accounts where user_id = $1) accounts,
+       (select count(*)::int from contacts c join ig_accounts acc on acc.id = c.ig_account_id where acc.user_id = $1) contacts,
+       (select count(*)::int from automations a join ig_accounts acc on acc.id = a.ig_account_id where acc.user_id = $1) automations,
+       (select count(*)::int from automations a join ig_accounts acc on acc.id = a.ig_account_id
+          where acc.user_id = $1 and a.status = 'live') live,
+       (select count(*)::int from comment_events ce join ig_accounts acc on acc.id = ce.ig_account_id where acc.user_id = $1) comments,
+       (select count(*)::int from messages m join contacts c on c.id = m.contact_id join ig_accounts acc on acc.id = c.ig_account_id
+          where acc.user_id = $1 and m.sent_by = 'human' and m.kind <> 'note' and m.mid is not null) "humanReplies"`,
+    [userId],
+  )
+  return r
+}

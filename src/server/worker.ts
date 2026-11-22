@@ -7,6 +7,7 @@
 import { getDb } from "./db"
 import { decrypt, encrypt } from "./crypto"
 import { env } from "./env"
+import { secrets } from "./config"
 import { httpInstagram } from "./instagram"
 import { importAccountFromEnv, ensureOwner, seedDefaultAutomation } from "./bootstrap"
 import { expireStaleRuns, processPending, resumeDueRuns } from "./engine/engine"
@@ -17,7 +18,7 @@ const g = globalThis as unknown as { __worker?: WorkerState; __boot?: Promise<vo
 const log = (msg: string, data?: unknown) => console.log(`[worker] ${msg}`, data ?? "")
 
 async function deps() {
-  return { db: await getDb(), ig: httpInstagram(env.apiVersion()), encKey: env.tokenEncKey(), log }
+  return { db: await getDb(), ig: httpInstagram(env.apiVersion()), encKey: await secrets.tokenEncKey(), log }
 }
 
 async function refreshTokens() {

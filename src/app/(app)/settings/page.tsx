@@ -1,14 +1,16 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { ChevronRightIcon, AtSignIcon, ShieldCheckIcon, TagIcon } from "lucide-react"
+import { ChevronRightIcon, FileTextIcon, RefreshCwIcon, Share2Icon, ShieldCheckIcon, TagIcon } from "lucide-react"
 import { Page, PageHeader } from "@/components/mc/page-header"
 
 export const metadata: Metadata = { title: "Ajustes" }
 
 const ITEMS = [
-  { href: "/settings/instagram", icon: AtSignIcon, title: "Instagram", text: "Cuentas conectadas, acceso y webhooks", ready: true },
-  { href: "/settings/security", icon: ShieldCheckIcon, title: "Seguridad", text: "Dónde está abierto el panel y cerrar sesiones", ready: true },
-  { href: "#", icon: TagIcon, title: "Etiquetas y campos", text: "Llega en el hito 3", ready: false },
+  { href: "/conectar", icon: Share2Icon, title: "Redes conectadas", text: "Tu Instagram, la guía de Meta y TikTok", ready: true },
+  { href: "/settings/security", icon: ShieldCheckIcon, title: "Seguridad", text: "Contraseña y sesiones abiertas", ready: true },
+  { href: "/settings/actualizaciones", icon: RefreshCwIcon, title: "Actualizaciones", text: "Tu versión y las actualizaciones automáticas", ready: true },
+  { href: "/terminos", icon: FileTextIcon, title: "Términos y licencia", text: "Lo que aceptaste al instalar FChat", ready: true },
+  { href: "#", icon: TagIcon, title: "Etiquetas y campos", text: "Próximamente", ready: false },
 ]
 
 export default function SettingsPage() {

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { getDb } from "@/server/db"
 import { encrypt, verify } from "@/server/crypto"
 import { env } from "@/server/env"
+import { igApp, secrets } from "@/server/config"
 import { httpInstagram } from "@/server/instagram"
 import { SESSION_COOKIE, sessionUser } from "@/server/session"
 import { seedDefaultAutomation } from "@/server/bootstrap"
@@ -9,21 +10,23 @@ import { seedDefaultAutomation } from "@/server/bootstrap"
 // Instagram vuelve acá con un code: code → token corto → token largo (60 días)
 // → /me → se guarda cifrado → se suscribe la cuenta a los webhooks.
 export async function GET(req: NextRequest) {
-  const back = (q: string) => NextResponse.redirect(new URL(`/settings/instagram?${q}`, req.url))
+  const back = (q: string) => NextResponse.redirect(new URL(`/conectar?${q}`, req.url))
   const q = req.nextUrl.searchParams
   if (q.get("error")) return back("error=denied")
 
-  const secret = env.sessionSecret()
+  const secret = await secrets.session()
   const user = await sessionUser(req.cookies.get(SESSION_COOKIE)?.value)
   if (!user) return NextResponse.redirect(new URL("/login", req.url))
   const session = { uid: user.id }
   const state = q.get("state")
   if (!state || state !== req.cookies.get("ig_oauth_state")?.value || !verify(state, secret)) return back("error=state")
 
+  const app = await igApp()
+  if (!app) return back("error=config")
   try {
     const form = new URLSearchParams({
-      client_id: env.igAppId(),
-      client_secret: env.igAppSecret(),
+      client_id: app.appId,
+      client_secret: app.appSecret,
       grant_type: "authorization_code",
       redirect_uri: `${env.publicUrl()}/api/instagram/callback`,
       code: q.get("code") ?? "",
@@ -35,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     const longUrl = new URL("https://graph.instagram.com/access_token")
     longUrl.searchParams.set("grant_type", "ig_exchange_token")
-    longUrl.searchParams.set("client_secret", env.igAppSecret())
+    longUrl.searchParams.set("client_secret", app.appSecret)
     longUrl.searchParams.set("access_token", short.access_token)
     const long = (await (await fetch(longUrl)).json()) as { access_token?: string; expires_in?: number }
     if (!long.access_token) return back("error=exchange")
@@ -56,7 +59,7 @@ export async function GET(req: NextRequest) {
         me.user_id,
         me.username,
         me.profile_picture_url ?? null,
-        encrypt(long.access_token, env.tokenEncKey()),
+        encrypt(long.access_token, await secrets.tokenEncKey()),
         long.expires_in ?? 60 * 86400,
         ["instagram_business_basic", "instagram_business_manage_messages", "instagram_business_manage_comments"],
       ],

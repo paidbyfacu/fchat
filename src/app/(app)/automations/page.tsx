@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { scopeText, timeAgo } from "@/lib/format"
 import { listAutomations } from "@/server/queries"
 import { requireUser } from "@/server/session"
+import { AutomationTabs } from "./automation-tabs"
 import { StatusToggle } from "./status-toggle"
 
 export const metadata: Metadata = { title: "Automatizaciones" }
@@ -25,8 +26,8 @@ async function List() {
         title="Todavía no hay automatizaciones"
         description="Empieza por la más usada: responder con un DM a quien comenta una palabra en tus posts."
         action={
-          <Link href="/automations/new" className={buttonVariants()}>
-            <PlusIcon aria-hidden /> Crear la primera
+          <Link href="/automations/plantillas" className={buttonVariants()}>
+            <PlusIcon aria-hidden /> Elegir una plantilla
           </Link>
         }
       />
@@ -100,6 +101,7 @@ export default function AutomationsPage() {
           </Link>
         }
       />
+      <AutomationTabs current="/automations" />
       <Suspense fallback={<ListSkeleton />}>
         <List />
       </Suspense>

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 
-/** Marca: globo de chat con un rayo (respuesta automática), sobre el naranja de marca. */
+/** Ícono cuadrado: globo de chat con un rayo. Solo para espacios chicos, como la pestaña. */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" aria-hidden className={cn("size-8 shrink-0", className)}>
@@ -14,13 +14,29 @@ export function LogoMark({ className }: { className?: string }) {
   )
 }
 
-export function Logo({ className, compact = false }: { className?: string; compact?: boolean }) {
+/** Logo de FChat: la palabra FChat y debajo «by paidbyfacu». */
+export function Logo({ className, size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) {
   return (
-    <span className={cn("flex min-w-0 items-center gap-2.5", className)}>
-      <LogoMark />
-      <span className={cn("grid min-w-0 leading-tight", compact && "flex items-baseline gap-1.5")}>
-        <span className="truncate text-sm font-bold tracking-tight">FChat</span>
-        <span className="truncate text-xs text-muted-foreground">by paidbyfacu</span>
+    <span className={cn("inline-grid select-none justify-items-start leading-none", className)} aria-label="FChat by paidbyfacu">
+      <span
+        aria-hidden
+        className={cn(
+          "font-extrabold tracking-[-0.045em]",
+          size === "sm" && "text-lg",
+          size === "md" && "text-[1.375rem]",
+          size === "lg" && "text-[2.25rem]",
+        )}
+      >
+        F<span className="text-brand">Chat</span>
+      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "font-medium tracking-wide text-muted-foreground",
+          size === "lg" ? "mt-1 text-xs" : "mt-0.5 text-[0.625rem]",
+        )}
+      >
+        by paidbyfacu
       </span>
     </span>
   )

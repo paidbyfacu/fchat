@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { getDb } from "@/server/db"
 import { decrypt } from "@/server/crypto"
 import { env } from "@/server/env"
+import { secrets } from "@/server/config"
 import { httpInstagram } from "@/server/instagram"
 import { destroySession, requireUser, revokeSessions } from "@/server/session"
 
@@ -39,7 +40,7 @@ export async function resubscribeWebhooks(accountId: string) {
   )
   if (!acc) throw new Error("No encontré esa cuenta")
   const ig = httpInstagram(env.apiVersion())
-  await ig.subscribe(decrypt(acc.access_token_enc, env.tokenEncKey()), acc.ig_user_id, ["comments", "messages", "messaging_postbacks"])
+  await ig.subscribe(decrypt(acc.access_token_enc, await secrets.tokenEncKey()), acc.ig_user_id, ["comments", "messages", "messaging_postbacks"])
   await db.query(`update ig_accounts set webhooks_subscribed = true where id = $1`, [accountId])
   refresh()
 }

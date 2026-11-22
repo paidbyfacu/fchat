@@ -1,64 +1,78 @@
+import Link from "next/link"
 import { Suspense } from "react"
-import { LogOutIcon } from "lucide-react"
-import { AppSidebar, MobileNav } from "@/components/mc/app-sidebar"
-import { Skeleton } from "@/components/ui/skeleton"
-import { listAccounts } from "@/server/queries"
+import { SparklesIcon } from "lucide-react"
+import { Aurora } from "@/components/mc/aurora"
+import { Logo } from "@/components/mc/logo"
+import { TopNav } from "@/components/mc/top-nav"
+import { listAccounts, unreadTotal } from "@/server/queries"
 import { requireUser } from "@/server/session"
+import { runWorkflowUrl, updateInfo } from "@/server/update"
 import { logout } from "./actions"
 
-function LogoutButton() {
+async function Nav() {
+  const user = await requireUser()
+  const [accounts, unread] = await Promise.all([listAccounts(user.id), unreadTotal(user.id)])
+  const acc = accounts[0]
   return (
-    <form action={logout}>
-      <button
-        type="submit"
-        className="flex h-10 w-full items-center gap-3 rounded-sm px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-      >
-        <LogOutIcon className="size-4" aria-hidden /> Salir
-      </button>
-    </form>
+    <TopNav
+      username={acc ? `@${acc.username}` : (user.name ?? user.email.split("@")[0])}
+      picture={acc?.profile_pic_url ?? null}
+      email={user.email}
+      unread={unread}
+      logout={logout}
+    />
   )
 }
 
-async function who() {
-  const user = await requireUser()
-  const [acc] = await listAccounts(user.id)
-  return { username: acc?.username ?? user.email.split("@")[0], picture: acc?.profile_pic_url ?? null }
-}
-
-async function Sidebar() {
-  const w = await who()
-  return <AppSidebar username={w.username} picture={w.picture} footer={<LogoutButton />} />
-}
-
-async function Mobile() {
-  const w = await who()
-  return <MobileNav username={w.username} footer={<LogoutButton />} />
-}
-
-function SidebarSkeleton() {
+function NavSkeleton() {
   return (
-    <div className="grid h-full w-[var(--tk-layout-sidebar)] content-start gap-3 border-r border-border bg-sidebar p-3">
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <Skeleton key={i} className="h-9 bg-muted" />
-      ))}
+    <div className="sticky top-0 z-40 border-b border-border/80 bg-card/80 backdrop-blur-md">
+      <div className="mx-auto flex h-[var(--tk-layout-header)] max-w-[var(--tk-layout-content-max)] items-center px-4 sm:px-6">
+        <Logo size="sm" />
+      </div>
+    </div>
+  )
+}
+
+/** Franja arriba cuando hay una versión nueva de FChat publicada. */
+async function UpdateNotice() {
+  await requireUser()
+  const u = await updateInfo()
+  if (!u.outdated || u.isUpstream) return null
+  const href = u.autoUpdate && u.repo ? runWorkflowUrl(u.repo) : "/settings/actualizaciones"
+  return (
+    <div role="status" className="border-b border-border bg-brand-subtle text-on-brand-subtle">
+      <div className="mx-auto flex max-w-[var(--tk-layout-content-max)] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm sm:px-6">
+        <SparklesIcon className="size-4 shrink-0" aria-hidden />
+        <p className="flex-1">
+          Hay una versión nueva de FChat, la {u.latest}. Tienes la {u.current}.
+          {u.autoUpdate ? " Se instala sola en las próximas horas." : " Activa las actualizaciones automáticas para recibirla."}
+        </p>
+        {u.autoUpdate && u.repo ? (
+          <a href={href} target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2">
+            Actualizar ahora
+          </a>
+        ) : (
+          <Link href={href} className="font-semibold underline underline-offset-2">
+            Ver cómo actualizar
+          </Link>
+        )}
+      </div>
     </div>
   )
 }
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="flex min-h-svh">
-      <div className="sticky top-0 hidden h-svh shrink-0 md:block">
-        <Suspense fallback={<SidebarSkeleton />}>
-          <Sidebar />
-        </Suspense>
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Suspense fallback={<div className="h-[var(--tk-layout-header)] border-b border-border bg-sidebar md:hidden" />}>
-          <Mobile />
-        </Suspense>
-        {children}
-      </div>
+    <div className="relative isolate flex min-h-svh flex-col">
+      <Aurora className="fixed" />
+      <Suspense fallback={<NavSkeleton />}>
+        <Nav />
+      </Suspense>
+      <Suspense fallback={null}>
+        <UpdateNotice />
+      </Suspense>
+      {children}
     </div>
   )
 }

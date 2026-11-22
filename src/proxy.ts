@@ -1,19 +1,35 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { verify } from "@/server/crypto"
 
-// Todo el panel pide sesión. Lo público: login, webhooks de Meta, páginas que
-// pide Meta, health check, links con seguimiento y /design en desarrollo.
-// /api/cron no usa la cookie: se protege sola con CRON_SECRET.
-// Acá solo se revisa la firma; páginas, acciones y rutas API revisan además que la
+// Todo el panel pide sesión. Lo público: login, la instalación, los términos,
+// webhooks de Meta, páginas que pide Meta, health check, links con seguimiento y
+// /design en desarrollo. /api/cron no usa la cookie: se protege sola.
+// Acá solo se revisa la cookie; páginas, acciones y rutas API revisan además que la
 // sesión siga activa en la base, con requireUser o sessionUser.
-const PUBLIC = [/^\/login$/, /^\/webhook$/, /^\/api\/webhooks\//, /^\/api\/health$/, /^\/api\/cron$/, /^\/privacy$/, /^\/data-deletion$/, /^\/l\//]
+const PUBLIC = [
+  /^\/login$/,
+  /^\/setup$/,
+  /^\/terminos$/,
+  /^\/webhook$/,
+  /^\/api\/webhooks\//,
+  /^\/api\/health$/,
+  /^\/api\/cron$/,
+  /^\/privacy$/,
+  /^\/data-deletion$/,
+  /^\/l\//,
+]
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   if (PUBLIC.some((r) => r.test(pathname))) return NextResponse.next()
   if (pathname === "/design" && process.env.NODE_ENV !== "production") return NextResponse.next()
+  const cookie = req.cookies.get("sid")?.value
+  // con SESSION_SECRET se revisa la firma. Sin él, el secreto vive en la base y la
+  // firma la revisa requireUser: acá alcanza con que la cookie tenga forma de token
   const secret = process.env.SESSION_SECRET
-  const ok = secret && verify<{ typ?: string; uid: string; exp: number }>(req.cookies.get("sid")?.value, secret)?.typ === "s"
+  const ok = secret
+    ? verify<{ typ?: string; uid: string; exp: number }>(cookie, secret)?.typ === "s"
+    : !!cookie && /^[\w-]+\.[\w-]+$/.test(cookie)
   if (ok) return NextResponse.next()
   if (pathname.startsWith("/api/")) return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   const url = new URL("/login", req.url)

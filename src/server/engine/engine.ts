@@ -437,7 +437,9 @@ async function upsertContact(db: Db, accountId: string, igsid: string, username?
        opted_in = contacts.opted_in or excluded.opted_in,
        last_inbound_at = case when $4 then now() else contacts.last_inbound_at end,
        last_message_at = case when $4 then now() else contacts.last_message_at end,
-       unread_count = contacts.unread_count + case when $4 then 1 else 0 end
+       unread_count = contacts.unread_count + case when $4 then 1 else 0 end,
+       -- si escribe en una conversación cerrada de la bandeja, se vuelve a abrir
+       inbox_status = case when $4 then 'open' else contacts.inbox_status end
      returning id, igsid, last_inbound_at`,
     [accountId, igsid, username ?? null, Boolean(o.inbound)],
   )

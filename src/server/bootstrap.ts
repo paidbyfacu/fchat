@@ -1,23 +1,29 @@
-// Arranque: usuario dueño desde el entorno, la cuenta de IG_ACCESS_TOKEN si está
-// y una automatización de ejemplo en borrador.
+// Arranque: usuario dueño desde el entorno si está, la cuenta de IG_ACCESS_TOKEN
+// si está y una automatización de ejemplo en borrador. Sin variables, el dueño se
+// crea desde la pantalla de instalación, en /setup.
 
 import { createHash } from "node:crypto"
 import type { Db } from "./db"
 import { decrypt, encrypt, hashPassword, verifyPassword } from "./crypto"
 import { env } from "./env"
+import { secrets } from "./config"
 import type { InstagramClient } from "./instagram"
 import { commentToDmGraph } from "./engine/graph"
 
 /** Largo mínimo de OWNER_PASSWORD en producción: el panel queda en internet. */
 export const MIN_OWNER_PASSWORD = 12
 
+/** Si OWNER_EMAIL y OWNER_PASSWORD están en el entorno, la contraseña de ese usuario sale de ahí y se pisa en cada arranque. */
+export function passwordFromEnv(email: string): boolean {
+  const e = env.ownerEmail()?.trim().toLowerCase()
+  return !!(e && env.ownerPassword() && e === email.toLowerCase())
+}
+
 export async function ensureOwner(db: Db) {
   const email = env.ownerEmail()
   const password = env.ownerPassword()
-  if (!email || !password) {
-    console.error("[bootstrap] faltan OWNER_EMAIL u OWNER_PASSWORD: nadie va a poder entrar al panel")
-    return
-  }
+  // sin variables: el dueño se crea desde /setup
+  if (!email || !password) return
   if (env.isProd && password.length < MIN_OWNER_PASSWORD) {
     console.error(`[bootstrap] OWNER_PASSWORD tiene que tener al menos ${MIN_OWNER_PASSWORD} caracteres: no se aplicó`)
     return
@@ -50,7 +56,7 @@ export async function importAccountFromEnv(db: Db, ig: InstagramClient) {
   const [existing] = await db.query<{ id: string; access_token_enc: Uint8Array; status: string }>(
     `select id, access_token_enc, status from ig_accounts order by created_at limit 1`,
   )
-  const key = env.tokenEncKey()
+  const key = await secrets.tokenEncKey()
   // ya importado, o es el mismo de la cuenta activa: nada que hacer, sin gastar una llamada a Meta
   if (existing && (seen?.value === fingerprint || (existing.status === "ok" && decrypt(existing.access_token_enc, key) === token))) return
   const me = await ig.getMe(token)

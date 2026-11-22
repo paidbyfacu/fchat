@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { getDb } from "@/server/db"
 import { decrypt } from "@/server/crypto"
 import { env } from "@/server/env"
+import { secrets } from "@/server/config"
 import { httpInstagram, IgError } from "@/server/instagram"
 import { SESSION_COOKIE, sessionUser } from "@/server/session"
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   if (!acc) return NextResponse.json({ error: "Cuenta no encontrada o desconectada" }, { status: 404 })
   try {
     const ig = httpInstagram(env.apiVersion())
-    const r = await ig.listMedia(decrypt(acc.access_token_enc, env.tokenEncKey()), acc.ig_user_id, after)
+    const r = await ig.listMedia(decrypt(acc.access_token_enc, await secrets.tokenEncKey()), acc.ig_user_id, after)
     const body = {
       items: r.data
         .filter((m) => m.media_product_type !== "STORY" && m.media_product_type !== "AD")

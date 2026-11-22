@@ -6,8 +6,10 @@ import { Banner } from "@/components/mc/feedback"
 import { Page, PageHeader } from "@/components/mc/page-header"
 import { deviceLabel } from "@/lib/device"
 import { timeAgo } from "@/lib/format"
+import { passwordFromEnv } from "@/server/bootstrap"
 import { getDb } from "@/server/db"
 import { requireUser } from "@/server/session"
+import { PasswordForm } from "./password-form"
 import { RevokeOthersButton, RevokeSessionButton } from "./session-buttons"
 
 export const metadata: Metadata = { title: "Seguridad" }
@@ -52,6 +54,25 @@ async function Sessions() {
   )
 }
 
+async function Password() {
+  const user = await requireUser()
+  const fromEnv = passwordFromEnv(user.email)
+  return (
+    <section aria-labelledby="clave" className="grid gap-3 md:max-w-2xl">
+      <h2 id="clave" className="text-lg">
+        Contraseña
+      </h2>
+      {fromEnv ? (
+        <Banner tone="info" title="Tu contraseña sale de las variables de tu servidor">
+          Para cambiarla, cambia OWNER_PASSWORD en Vercel y vuelve a desplegar. Al hacerlo se cierran todas las sesiones.
+        </Banner>
+      ) : (
+        <PasswordForm />
+      )}
+    </section>
+  )
+}
+
 export default function SecurityPage() {
   return (
     <Page>
@@ -61,10 +82,18 @@ export default function SecurityPage() {
       <PageHeader title="Seguridad" description="Los lugares donde el panel está abierto ahora. Si ves uno que no reconoces, ciérralo y cambia la contraseña." />
       <Banner tone="info" title="Cómo se protege el panel">
         Cada sesión dura 30 días y se puede cerrar desde aquí. Después de 5 intentos fallidos, esa IP queda bloqueada 15 minutos. Cambiar
-        OWNER_PASSWORD en Vercel cierra todas las sesiones.
+        la contraseña cierra las demás sesiones.
       </Banner>
-      <Suspense fallback={<Skeleton className="h-24 bg-muted" />}>
-        <Sessions />
+      <section aria-labelledby="sesiones" className="grid gap-3">
+        <h2 id="sesiones" className="text-lg">
+          Sesiones abiertas
+        </h2>
+        <Suspense fallback={<Skeleton className="h-24 bg-muted" />}>
+          <Sessions />
+        </Suspense>
+      </section>
+      <Suspense fallback={<Skeleton className="h-48 bg-muted md:max-w-2xl" />}>
+        <Password />
       </Suspense>
     </Page>
   )

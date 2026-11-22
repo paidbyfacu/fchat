@@ -37,3 +37,111 @@
     }
   }
 }
+
+/* Fondo animado: manchas de color muy suaves que se mueven lento detrás del contenido.
+   Va dentro de un contenedor con isolate; con movimiento reducido quedan quietas. */
+@layer components {
+  .fc-aurora {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .fc-aurora > span {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(72px);
+    opacity: 0.5;
+    will-change: transform;
+    animation: fc-drift 26s var(--tk-motion-ease) infinite alternate;
+  }
+  .fc-aurora > span:nth-child(1) {
+    width: 38rem;
+    height: 38rem;
+    left: -12rem;
+    top: -16rem;
+    background: radial-gradient(closest-side, #f4b9a1, transparent);
+  }
+  .fc-aurora > span:nth-child(2) {
+    width: 32rem;
+    height: 32rem;
+    right: -10rem;
+    top: -10rem;
+    background: radial-gradient(closest-side, #dccbff, transparent);
+    animation-duration: 32s;
+    animation-delay: -8s;
+  }
+  .fc-aurora > span:nth-child(3) {
+    width: 30rem;
+    height: 30rem;
+    left: 35%;
+    top: 10rem;
+    background: radial-gradient(closest-side, #ffd3df, transparent);
+    animation-duration: 38s;
+    animation-delay: -16s;
+    opacity: 0.4;
+  }
+  .fc-aurora-strong > span {
+    opacity: 0.85;
+  }
+
+  /* Texto con un degradé de marca que se desplaza despacio. */
+  .fc-gradient-text {
+    background: linear-gradient(90deg, #b85a38, #a3401c, #9b3a6b, #b85a38);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: fc-pan 10s linear infinite;
+  }
+
+  /* Borde con degradé para destacar una tarjeta, como la plantilla más usada. */
+  .fc-glow {
+    position: relative;
+    isolation: isolate;
+  }
+  .fc-glow::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(120deg, #d97757, #e9a0c0, #b9a2ff, #d97757);
+    background-size: 300% 300%;
+    animation: fc-pan 8s linear infinite;
+  }
+
+  /* Flota despacio, para ilustraciones de estados vacíos. */
+  .fc-float {
+    animation: fc-float 6s ease-in-out infinite;
+  }
+}
+
+@keyframes fc-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes fc-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(5rem, 3rem, 0) scale(1.15);
+  }
+}
+
+@keyframes fc-pan {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 300% 50%;
+  }
+}

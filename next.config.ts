@@ -1,4 +1,10 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { NextConfig } from "next";
+
+// Si el repositorio tiene el workflow que trae las versiones nuevas: el panel lo
+// muestra en Ajustes › Actualizaciones y deja de pedir que se active.
+const autoUpdate = existsSync(path.join(process.cwd(), ".github/workflows/actualizar-fchat.yml"));
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -8,6 +14,7 @@ const nextConfig: NextConfig = {
   // las migraciones se leen del disco al abrir la base: que viajen con las funciones de Vercel
   outputFileTracingIncludes: { "/**": ["./db/migrations/**"] },
   poweredByHeader: false,
+  env: { FCHAT_AUTOUPDATE: autoUpdate ? "1" : "0" },
   // Capas del navegador: nadie puede meter el panel en un iframe de otro sitio para
   // engañar clics, ni adivinar tipos de archivo, ni leer de dónde vienes. Buscadores fuera.
   async headers() {

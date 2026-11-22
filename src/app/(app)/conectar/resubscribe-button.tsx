@@ -3,7 +3,7 @@
 import { useTransition } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { resubscribeWebhooks } from "../../actions"
+import { resubscribeWebhooks } from "../actions"
 
 export function ResubscribeButton({ accountId, username }: { accountId: string; username: string }) {
   const [pending, start] = useTransition()

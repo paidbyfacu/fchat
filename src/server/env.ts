@@ -1,12 +1,8 @@
-// Configuración. En producción falta algo → error al arrancar, no a mitad de un envío.
+// Configuración desde variables de entorno. Todas son opcionales: los secretos
+// que faltan se generan solos y la app de Instagram se carga desde el panel,
+// ver config.ts.
 
 const isProd = process.env.NODE_ENV === "production"
-
-function need(name: string): string {
-  const v = process.env[name]
-  if (!v) throw new Error(`Falta la variable de entorno ${name}`)
-  return v
-}
 
 export const env = {
   isProd,
@@ -16,11 +12,6 @@ export const env = {
     const url = process.env.PUBLIC_URL || (vercel ? `https://${vercel}` : "http://localhost:3000")
     return url.replace(/\/$/, "")
   },
-  sessionSecret: () => need("SESSION_SECRET"),
-  tokenEncKey: () => need("TOKEN_ENC_KEY"),
-  igAppId: () => need("IG_APP_ID"),
-  igAppSecret: () => need("IG_APP_SECRET"),
-  webhookVerifyToken: () => need("WEBHOOK_VERIFY_TOKEN"),
   apiVersion: () => process.env.IG_API_VERSION ?? "v26.0",
   ownerEmail: () => process.env.OWNER_EMAIL,
   ownerPassword: () => process.env.OWNER_PASSWORD,
