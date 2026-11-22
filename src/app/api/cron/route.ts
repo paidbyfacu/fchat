@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { connection, NextResponse, type NextRequest } from "next/server"
 import { safeEqual } from "@/server/crypto"
 import { env } from "@/server/env"
 import { getDb } from "@/server/db"
@@ -8,6 +8,7 @@ import { bootstrap, runCycle } from "@/server/worker"
 // colgados y tokens por vencer. Con CRON_SECRET solo entra quien lo manda. Sin
 // él, cualquiera puede llamarlo, pero corre como mucho una vez cada 10 minutos.
 export async function GET(req: NextRequest) {
+  await connection() // siempre en el request, nunca al construir: sin secreto no lee nada del pedido
   const secret = env.cronSecret()
   if (secret) {
     if (!safeEqual(req.headers.get("authorization"), `Bearer ${secret}`)) return new NextResponse("forbidden", { status: 403 })

@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { connection, NextResponse, type NextRequest } from "next/server"
 import { sign } from "@/server/crypto"
 import { env } from "@/server/env"
 import { igApp, secrets } from "@/server/config"
@@ -8,6 +8,7 @@ const SCOPES = ["instagram_business_basic", "instagram_business_manage_messages"
 // Arranca el login de Instagram (Business Login). El state firmado evita que
 // otro sitio complete la conexión en tu nombre.
 export async function GET(req: NextRequest) {
+  await connection() // siempre en el request, nunca al construir
   const app = await igApp().catch(() => null)
   if (!app) return NextResponse.redirect(new URL("/conectar?error=config", req.url))
   const appId = app.appId
