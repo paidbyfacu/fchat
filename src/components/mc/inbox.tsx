@@ -7,15 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
-const WINDOW_HOURS = 24
-
-/** Horas que le quedan a la ventana de 24 h, o null si ya cerró. */
-export function windowLeft(lastInboundAt: Date | null, now = new Date()): number | null {
-  if (!lastInboundAt) return null
-  const left = WINDOW_HOURS - (now.getTime() - lastInboundAt.getTime()) / 36e5
-  return left > 0 ? Math.floor(left) : null
-}
-
 export function ConversationItem({
   name,
   preview,

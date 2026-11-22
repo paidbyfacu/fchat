@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ChannelBadge, InstagramGlyph, TikTokGlyph } from "@/components/mc/channel-icons"
-import { windowLeft } from "@/components/mc/inbox"
+import { windowLeft } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
   conversationTimeline,
