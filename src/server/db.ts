@@ -109,8 +109,14 @@ export async function openDb(opts: { url?: string; pgliteDir?: string } = {}): P
 }
 
 // Una sola instancia por proceso (el servidor de desarrollo recarga módulos).
+// Si abrirla falla, como una base de Neon que tarda en despertar o dos funciones que
+// migran a la vez en la primera instalación, no se guarda el error: el próximo pedido
+// lo vuelve a intentar en vez de fallar hasta que Vercel recicle la función.
 const g = globalThis as unknown as { __db?: Promise<Db> }
 export function getDb(): Promise<Db> {
-  g.__db ??= openDb()
+  g.__db ??= openDb().catch((e) => {
+    g.__db = undefined
+    throw e
+  })
   return g.__db
 }
