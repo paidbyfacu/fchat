@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/paidbyfacu/fchat/security/advisories/new
+    about: Please report security problems privately, never in a public issue.
+  - name: Step-by-step guide in Spanish
+    url: https://paidbyfacu.com/guias/fchat
+    about: Guía completa de instalación en español.

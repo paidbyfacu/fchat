@@ -1,10 +1,10 @@
-# Actualiza tu copia de FChat con la última versión de paidbyfacu/fchat.
-# Revisa cada 4 horas y también cuando tocas «Run workflow». Si hay una versión
-# nueva, hace un commit en tu repositorio y Vercel la publica sola.
-# Tu carpeta .github no se toca. Si cambiaste el código a mano, esos cambios se
-# reemplazan por los del repositorio oficial: para conservarlos, desactiva este
-# workflow en la pestaña Actions de GitHub.
-name: Actualizar FChat
+# Keeps your copy of FChat up to date with the latest version of paidbyfacu/fchat.
+# Runs every 4 hours and whenever you click "Run workflow". When there is a new
+# version, it commits it to your repository and Vercel deploys it on its own.
+# Your .github folder is never touched. If you changed the code by hand, those
+# changes are replaced by the official repository's: to keep them, disable this
+# workflow in the Actions tab on GitHub.
+name: Update FChat
 
 on:
   schedule:
@@ -27,22 +27,22 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Traer la última versión
+      - name: Fetch the latest version
         run: git fetch --depth=1 https://github.com/paidbyfacu/fchat.git main
 
-      - name: Aplicar la versión nueva
+      - name: Apply the new version
         run: |
           git read-tree --reset -u FETCH_HEAD
           git rm -r -q --cached --ignore-unmatch .github
           rm -rf .github
           git checkout HEAD -- .github
           if git diff --cached --quiet; then
-            echo "Ya tienes la última versión de FChat."
+            echo "You already have the latest version of FChat."
             exit 0
           fi
           version=$(node -p "require('./package.json').version")
           git config user.name "${{ github.repository_owner }}"
           git config user.email "${{ github.repository_owner_id }}+${{ github.repository_owner }}@users.noreply.github.com"
-          git commit -q -m "Actualizar FChat a la versión $version"
+          git commit -q -m "Update FChat to version $version"
           git push
-          echo "FChat actualizado a la versión $version. Vercel la publica en unos minutos."
+          echo "FChat updated to version $version. Vercel will deploy it in a few minutes."

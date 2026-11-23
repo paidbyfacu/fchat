@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest an idea or improvement for FChat.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape FChat. Ideas that solve a real problem for creators and small businesses are the most likely to land.
+        Want to build it yourself? Say so below: pull requests are welcome, see CONTRIBUTING.md.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: Describe the situation you are in and why the current version falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+      description: How it could look or work. Mockups are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to open a pull request for this.

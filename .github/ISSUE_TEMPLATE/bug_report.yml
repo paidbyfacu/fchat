@@ -1,0 +1,56 @@
+name: Bug report
+description: Something in FChat is not working as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please **remove any personal data** before posting: tokens, app secrets, URLs of your installation, Instagram usernames or IDs of real people.
+        Security problems go through a private report instead, see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to Automations
+        2. Create an automation with the keyword...
+        3. Comment the keyword on the post
+        4. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: FChat version
+      description: Shown in Settings › Updates, or in package.json.
+      placeholder: "1.0.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it run?
+      options:
+        - Vercel
+        - My computer, with PGlite
+        - Another server
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error messages
+      description: From Vercel › your project › Logs, or from the terminal. Remove tokens and personal data first.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Optional. Blur names, IDs and URLs.
