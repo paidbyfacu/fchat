@@ -21,6 +21,11 @@ Lo instalas en tu propia cuenta de Vercel, con tu propia app de Meta. No pagas u
   6. [Crea tu primera automatización](#paso-6-crea-tu-primera-automatización)
   7. [Pruébala](#paso-7-pruébala)
 - [Cómo se usa](#cómo-se-usa)
+- [Tu proyecto en Vercel](#tu-proyecto-en-vercel)
+  - [Ver los registros](#ver-los-registros)
+  - [Cargar o cambiar una variable](#cargar-o-cambiar-una-variable)
+  - [Volver a publicar](#volver-a-publicar)
+  - [Tu dirección y un dominio propio](#tu-dirección-y-un-dominio-propio)
 - [Si algo no funciona](#si-algo-no-funciona)
 - [Si olvidas tu contraseña](#si-olvidas-tu-contraseña)
 - [Variables de entorno](#variables-de-entorno)
@@ -49,14 +54,14 @@ Usa solo la API oficial de Instagram de Meta: la misma que usan las herramientas
 
 - Una cuenta de Instagram **profesional**, de empresa o de creador. Se cambia gratis desde la app de Instagram.
 - Una **segunda cuenta de Instagram** para probar: tuya o de alguien de confianza.
-- Una cuenta de [GitHub](https://github.com) y una de [Vercel](https://vercel.com). El plan gratis de Vercel alcanza. Puedes crear la de Vercel con tu cuenta de GitHub.
+- Una cuenta de [GitHub](https://github.com). La de [Vercel](https://vercel.com) se crea durante la instalación, entrando con GitHub. El plan gratis de Vercel, **Hobby**, alcanza.
 - Una cuenta de Facebook para entrar a [Meta for Developers](https://developers.facebook.com). La cuenta de desarrollador es gratis y se crea durante la guía.
 
 No necesitas instalar nada en tu computadora ni escribir código. Todo se hace desde el navegador, así que los pasos son los mismos en **Windows** y en **Mac**. Chrome, Edge, Safari o Firefox sirven igual.
 
 ## Instalación paso a paso
 
-Son unos 30 minutos en total y se hace una sola vez. Los paneles de Meta y de Vercel cambian seguido: si un botón tiene otro nombre, busca el más parecido.
+Son unos 30 minutos en total y se hace una sola vez. Los paneles de Meta, Vercel y GitHub cambian seguido: si un botón tiene otro nombre o está en otro lugar, busca el más parecido.
 
 ### Paso 1. Prepara tu Instagram
 
@@ -67,17 +72,100 @@ En la app de Instagram del teléfono, con la cuenta que quieres automatizar:
 
 ### Paso 2. Instala FChat en Vercel
 
-1. Toca el botón **Instalar en Vercel** de arriba y entra a Vercel con tu cuenta de GitHub.
-2. Vercel te pide un nombre para tu repositorio: deja «fchat» o elige otro. Puede ser privado. Toca **Create**.
-3. Cuando te ofrezca la base de datos de **Neon**, acéptala: elige la región más cercana a ti y el plan gratis. Ahí se guardan tus automatizaciones y contactos.
-4. Espera a que termine el deploy, unos 3 minutos. Vercel muestra una vista previa de tu FChat: toca **Continue to Dashboard**.
-5. En el panel de tu proyecto, toca **Visit** para abrir tu FChat. Su dirección es algo como `https://fchat-tu-usuario.vercel.app`. Guárdala en tus favoritos.
+[Vercel](https://vercel.com) es el servicio donde vive tu FChat: lo publica en internet y le da una dirección. Su plan gratis se llama **Hobby** y alcanza: no hace falta pagar el plan Pro.
+
+Las pantallas de Vercel están en inglés. En esta guía cada botón aparece con su nombre exacto, tal como lo vas a ver.
+
+#### 2.1. Crea tu cuenta de Vercel
+
+Si ya tienes cuenta en Vercel, entra con ella y sigue en el punto 2.2.
+
+1. Toca el botón **Instalar en Vercel** de arriba. Sin sesión iniciada, Vercel muestra «Your first deploy is just a sign-up away.»
+2. Toca **Continue with GitHub** y entra con tu cuenta de GitHub. Con ese permiso, Vercel crea tu copia de FChat en tu GitHub y la vuelve a publicar cada vez que cambia.
+3. La primera vez, GitHub te pide autorizar a Vercel para usar tu cuenta: acéptalo.
+
+<img src="docs/img/vercel-01-registro.webp" alt="Pantalla para crear la cuenta de Vercel, con el botón Continue with GitHub" width="420">
+
+#### 2.2. Crea tu copia de FChat
+
+Al entrar se abre **New Project**, con «Cloning from GitHub paidbyfacu/fchat». Vercel copia FChat a un repositorio nuevo en tu GitHub: desde ahí lo publica y lo actualiza.
+
+1. **Git Scope:** tu cuenta de GitHub. Ahí se crea el repositorio.
+2. **Private Repository Name:** el nombre de tu copia. Deja «fchat» o elige otro.
+3. El candado al lado del nombre decide quién ve el repositorio. Cerrado, es privado y solo lo ves tú. Si lo tocas, se abre, el título cambia a **Public Repository Name** y cualquiera puede ver el código. Las dos opciones funcionan, porque tus datos y tus claves nunca van al repositorio. Si no sabes cuál elegir, déjalo privado.
+4. **Vercel Team:** tu equipo de Vercel, con la etiqueta **Hobby**, el plan gratis. Déjalo como está.
+5. Toca **Create**.
+
+<img src="docs/img/vercel-02-clonar.webp" alt="New Project en Vercel: Git Scope, Private Repository Name con el candado cerrado, Vercel Team y Create" width="640">
+
+Así se ve con el candado abierto, si eliges un repositorio público:
+
+<img src="docs/img/vercel-03-repositorio-publico.webp" alt="New Project con el candado abierto y el título Public Repository Name" width="640">
+
+#### 2.3. Agrega la base de datos Neon
+
+FChat guarda tus automatizaciones, contactos y conversaciones en una base de datos Postgres de Neon. Vercel la crea dentro de tu cuenta: no hace falta abrir una cuenta aparte en Neon.
+
+1. En **Add Products**, bajo «Install all the mandatory products», aparece **Neon**. Toca **Add**.
+
+   <img src="docs/img/vercel-04-agregar-neon.webp" alt="Add Products en Vercel, con Neon y el botón Add" width="620">
+
+2. Se abre el panel **Install Integration**. En **Region**, elige **Washington, D.C., USA (East)**: es donde Vercel corre tu FChat si no cambias nada, y con la base cerca responde más rápido.
+3. **Auth** y **Realtime** pueden quedar como vienen: FChat no los usa.
+
+   <img src="docs/img/vercel-05-neon-region.webp" alt="Panel Install Integration de Neon con la región, Auth y Realtime" width="420">
+
+4. Más abajo, en **Installation Plan**, elige **Free**: «Neon's generous free tier, no credit card required.» Incluye 1 GB por proyecto, que alcanza de sobra. Toca **Continue**.
+
+   <img src="docs/img/vercel-06-neon-plan.webp" alt="Plan Free de Neon y el botón Continue" width="420">
+
+5. En **Confirmation** ves el nombre de la base en **Resource Name** y lo que elegiste. Toca **Create**.
+
+   <img src="docs/img/vercel-07-neon-crear.webp" alt="Confirmación de la base de Neon con el botón Create" width="420">
+
+6. Cuando aparece «Your Neon database is ready to use», toca **Done**.
+
+   <img src="docs/img/vercel-08-neon-lista.webp" alt="Aviso Your Neon database is ready to use con el botón Done" width="420">
+
+Vercel conecta la base con tu proyecto solo: carga `DATABASE_URL` y otras variables que empiezan con `POSTGRES_` o `PG`. No tienes que copiar nada.
+
+Si tienes la verificación en dos pasos activa, Vercel puede pedirte el código en la ventana **Verify Your Identity**: escríbelo y toca **Verify Code**.
+
+#### 2.4. Espera la publicación
+
+Con la base lista, Vercel publica tu FChat. A esto se le llama deploy y tarda uno o dos minutos: en la prueba de esta guía tardó 49 segundos. Cuando termina aparece **Deployed to Production**.
+
+Toca **Continue to Project** para ir al panel de tu proyecto. **Add Domain**, **Enable Speed Insights** y lo demás de esa pantalla son opcionales: FChat no los necesita.
+
+<img src="docs/img/vercel-09-desplegado.webp" alt="Pantalla Deployed to Production con los botones Visit y Continue to Project" width="460">
+
+#### 2.5. Abre tu FChat y guarda su dirección
+
+En el panel del proyecto, la tarjeta **Production Deployment** muestra tu publicación con el estado **Ready**.
+
+![Panel del proyecto en Vercel: Production Deployment, Domains y el botón Visit](docs/img/vercel-10-proyecto.webp)
+
+- Bajo **Domains** está la dirección de tu FChat, algo como `tu-fchat.vercel.app`. Vercel la arma con el nombre del proyecto y, si ese nombre ya lo usa otra persona, le agrega algo al final.
+- Toca **Visit** para abrir tu FChat y guárdalo en tus favoritos. Revisa que la dirección del navegador sea la misma de **Domains**.
+- La misma dirección aparece en el menú de la izquierda, en **Domains**, con «Valid Configuration» y la etiqueta **Production**.
+
+![Domains en Vercel con la dirección principal y Valid Configuration](docs/img/vercel-11-dominios.webp)
 
 No hace falta cargar variables de entorno: los secretos se generan solos la primera vez que abres FChat.
 
+#### Qué dirección usar
+
+Tu FChat tiene una sola dirección principal: la de **Domains**. Es la que usas para entrar al panel y la que va en Meta.
+
+- **Usa los botones Copiar de FChat.** En **Vincula tus redes**, cada dirección que pide Meta ya viene armada con tu dirección principal. Cópiala con su botón en lugar de escribirla a mano.
+- **El webhook es tu dirección principal con `/webhook` al final:** `https://tu-fchat.vercel.app/webhook`. Con `https://` adelante, sin otra barra al final y sin espacios.
+- **No uses la dirección larga.** Debajo de **Deployment**, Vercel muestra otra dirección, más larga, con letras al azar y el nombre de tu equipo, como `fchat-xxxxxxxxx-tu-equipo.vercel.app`. Vercel crea una nueva en cada publicación y la protege: quien la abre sin haber iniciado sesión en tu cuenta de Vercel ve **Log in to Vercel**. Meta tampoco puede entrar ahí, así que con esa dirección el webhook no funciona.
+
+<img src="docs/img/vercel-12-direccion-larga.webp" alt="La dirección larga de un deploy pide Log in to Vercel" width="460">
+
 ### Paso 3. Crea tu cuenta de administrador
 
-Abre tu FChat **apenas termine el deploy**. Aparece la pantalla de instalación:
+Abre tu FChat con **Visit** **apenas termine el deploy**. Aparece la pantalla de instalación:
 
 ![Pantalla de instalación de FChat: nombre, email, contraseña y términos](docs/img/fchat-01-instalacion.webp)
 
@@ -111,19 +199,53 @@ Cuando termines, FChat muestra «¡Instagram conectado!» y tu cuenta aparece co
 
 ### Paso 5. Activa las actualizaciones automáticas
 
-En FChat: **Ajustes** › **Actualizaciones** › **Activar en GitHub**.
+FChat se actualiza con un workflow de GitHub Actions: una tarea que GitHub corre sola en tu repositorio. El botón de Vercel no copia la carpeta `.github` del repositorio, por eso este paso se hace una vez desde el panel. Las pantallas de GitHub también están en inglés.
 
-![Ajustes › Actualizaciones con el botón Activar en GitHub](docs/img/fchat-21-actualizaciones.webp)
+1. En FChat: **Ajustes** › **Actualizaciones**. Aparece «Activa las actualizaciones automáticas» con el botón **Activar en GitHub**.
 
-1. Se abre GitHub con el archivo de actualización ya escrito. Arriba a la derecha toca **Commit changes**.
-2. En la ventana que aparece, toca otra vez **Commit changes**.
-3. Vercel se vuelve a publicar solo. En unos minutos, la página de FChat dice **Activas**.
+   ![Ajustes › Actualizaciones con el botón Activar en GitHub](docs/img/fchat-21-actualizaciones.webp)
 
-![Actualizaciones automáticas activas](docs/img/fchat-22-actualizaciones-activas.webp)
+2. Toca **Activar en GitHub**. Se abre GitHub con el archivo `actualizar-fchat.yml` ya escrito, dentro de `.github/workflows` de tu repositorio. Si GitHub te pide iniciar sesión, entra con la misma cuenta que usaste en Vercel. No cambies nada del texto.
+3. Arriba a la derecha, toca **Commit changes...**.
 
-Desde ahí, cada 4 horas GitHub revisa si hay una versión nueva de FChat. Si la hay, la copia a tu repositorio y Vercel la publica sola en unos minutos. Tus datos no se tocan: viven en la base de datos, no en el código. Si quieres actualizar en el momento, toca **Actualizar ahora**.
+   ![Editor de GitHub con el archivo actualizar-fchat.yml y el botón Commit changes](docs/img/github-01-nuevo-archivo.webp)
 
-El botón de Vercel no copia la carpeta `.github` del repositorio. Por eso este paso se hace desde el panel.
+4. En la ventana **Commit changes**, deja el mensaje como viene y marcada la opción **Commit directly to the main branch**. Toca **Commit changes**.
+
+   <img src="docs/img/github-02-commit.webp" alt="Ventana Commit changes de GitHub con Commit directly to the main branch" width="420">
+
+5. Vercel se vuelve a publicar solo. En unos minutos, **Ajustes** › **Actualizaciones** dice **Activas**.
+
+   ![Actualizaciones automáticas activas](docs/img/fchat-22-actualizaciones-activas.webp)
+
+Desde ahí, cada 4 horas GitHub revisa si hay una versión nueva de FChat. Si la hay, la copia a tu repositorio y Vercel la publica sola en unos minutos. Tus datos no se tocan: viven en la base de datos, no en el código.
+
+#### Actualizar en el momento
+
+En **Ajustes** › **Actualizaciones**, toca **Actualizar ahora**. Se abre la pestaña **Actions** de tu repositorio, en el workflow de FChat. Se llama **Actualizar FChat**, o **Update FChat** desde la versión 1.0.4.
+
+1. Toca **Run workflow**.
+2. En la ventana que se abre, deja **main** en «Use workflow from» y toca otra vez **Run workflow**.
+
+![Workflow de FChat en GitHub Actions con el botón Run workflow](docs/img/github-03-run-workflow.webp)
+
+La ejecución aparece en la lista de ese workflow. Si había una versión nueva, Vercel la publica en unos minutos.
+
+#### Si cambias el código a mano
+
+Cada actualización reemplaza el código de tu repositorio por el de FChat. Si cambiaste algo y quieres conservarlo, apaga el workflow: en la pestaña **Actions**, elige el workflow de FChat, toca el botón **...** al lado de **Run workflow** y después **Disable workflow**. GitHub pregunta «Disable workflow?»: toca otra vez **Disable workflow**.
+
+![Menú del workflow con Disable workflow](docs/img/github-04-menu-workflow.webp)
+
+#### Si GitHub pausa las actualizaciones
+
+En un repositorio **público**, GitHub pausa las tareas programadas cuando el repositorio pasa 60 días sin cambios, y suele avisarte por email. Para reactivarlas, entra a la pestaña **Actions** de tu repositorio, elige el workflow de FChat y toca **Enable workflow**. Lo mismo sirve si lo apagaste a mano: en ese caso el aviso dice «This workflow was disabled manually.»
+
+![Aviso de workflow desactivado con el botón Enable workflow](docs/img/github-05-enable-workflow.webp)
+
+#### Si tu repositorio es privado
+
+GitHub Actions es gratis en los repositorios públicos. En los privados, cada ejecución usa minutos de la cuota gratis mensual de tu cuenta de GitHub, y este workflow usa muy pocos. Si tu cuenta de GitHub tiene un pago rechazado o llegó a su límite de gasto, GitHub no arranca el workflow y muestra «The job was not started because recent account payments have failed or your spending limit needs to be increased.» Para que vuelva a correr, arregla la facturación de tu cuenta de GitHub o haz público el repositorio.
 
 ### Paso 6. Crea tu primera automatización
 
@@ -181,6 +303,10 @@ Todas tus conversaciones de Instagram. Filtra por abiertas, cerradas, no leídas
 
 ![Bandeja de FChat](docs/img/fchat-16-bandeja.webp)
 
+Así se ve una conversación completa: el comentario, el mensaje con su botón, el link y una respuesta escrita desde el panel.
+
+![Una conversación abierta en la Bandeja](docs/img/fchat-17-conversacion.webp)
+
 Instagram te deja responder a mano hasta 24 horas después del último mensaje de cada persona.
 
 ### Contactos
@@ -196,6 +322,73 @@ Todas las personas que interactuaron con tus automatizaciones: si te siguen, si 
 - **Actualizaciones:** la versión de FChat que tienes y las actualizaciones automáticas.
 - **Términos y licencia:** lo que aceptaste al instalar.
 
+## Tu proyecto en Vercel
+
+Casi nunca hace falta entrar a Vercel después de instalar. Cuando haga falta, entra a [vercel.com](https://vercel.com), abre tu proyecto y usa el menú de la izquierda: **Deployments**, **Logs**, **Environment Variables** y **Domains** son las únicas secciones que usa esta guía. **Analytics**, **Speed Insights**, **Firewall** y las demás son opcionales: FChat no las necesita.
+
+### Ver los registros
+
+En **Logs** está cada pedido que recibe tu FChat y cada error. Sirve para saber si los avisos de Meta llegan.
+
+![Logs de Vercel con el buscador y el botón Live](docs/img/vercel-13-logs.webp)
+
+- Cada fila muestra la hora, la página que se pidió en **Source** y el mensaje. Cuando Meta manda un aviso, aparece una fila con `/webhook`.
+- Escribe una palabra en **Search logs...** para filtrar, por ejemplo `webhook` o `error`.
+- Toca **Live** para ver los registros en el momento, mientras pruebas un comentario.
+- Por defecto se ven los últimos 30 minutos, «Last 30 minutes». En los filtros puedes elegir un período más largo y marcar solo los errores.
+
+Las filas que dicen `[tls-profile] applied` son de Vercel y no indican ningún problema.
+
+### Cargar o cambiar una variable
+
+En **Environment Variables** están las variables de tu proyecto. Al instalar, Neon carga las suyas: `DATABASE_URL`, `POSTGRES_URL`, `PGHOST` y otras parecidas. Vercel puede marcar algunas con **Needs Attention**: es una sugerencia de Vercel para renovar claves, no un error de FChat. No las cambies ni las borres, porque FChat dejaría de ver tu base de datos.
+
+![Environment Variables en Vercel, con las variables de Neon](docs/img/vercel-14-variables.webp)
+
+Para agregar una variable, como `OWNER_PASSWORD` o `IG_ACCESS_TOKEN`:
+
+1. Toca **Add Environment Variable**.
+2. En **Type**, elige **Secret** para contraseñas, claves y tokens: después de guardarla no se puede volver a ver. Para lo que no es secreto, como tu email, elige **Config**.
+3. En **Key**, escribe el nombre exacto de la variable, en mayúsculas, por ejemplo `IG_ACCESS_TOKEN`.
+4. En **Value**, pega el valor sin espacios al principio ni al final. **Note (Optional)** puede quedar vacío.
+5. Si necesitas otra variable, toca **Add new variable** y repite los pasos 3 y 4.
+6. En **Environments** deja **Production** y toca **Save**.
+
+<img src="docs/img/vercel-15-agregar-variable.webp" alt="Ventana Add Environment Variable con Type, Key, Value, Environments y Save" width="520">
+
+Una variable nueva o cambiada no se aplica sola: después hay que [volver a publicar](#volver-a-publicar). Para cambiar o borrar una variable, toca el botón **...** de su fila.
+
+### Volver a publicar
+
+Vuelve a publicar después de cargar o cambiar una variable. Tus datos no se tocan.
+
+1. Entra a **Deployments**. La primera fila es tu publicación actual, con **Ready** y la etiqueta **Production**.
+2. Toca el botón **...** de esa fila y elige **Redeploy**.
+
+   ![Deployments en Vercel con el menú de la publicación y la opción Redeploy](docs/img/vercel-17-menu-deployment.webp)
+
+3. En la ventana **Redeploy**, deja **Production** en «Choose Environment». «Use existing Build Cache.» puede quedar como viene. Toca **Redeploy**.
+
+   <img src="docs/img/vercel-18-redeploy.webp" alt="Ventana Redeploy con Production y el botón Redeploy" width="460">
+
+4. Aparece una fila nueva arriba de todo en **Deployments**. En uno o dos minutos dice **Ready**, y desde ahí FChat usa las variables nuevas.
+
+Cada actualización de FChat también suma una fila. La de arriba, con la etiqueta **Production** en azul, es la que está publicada:
+
+![Deployments con varias publicaciones en Ready y la actual marcada Production](docs/img/vercel-16-deployments.webp)
+
+En el menú **...** de cada fila, **Instant Rollback** vuelve a una publicación anterior si una actualización te da problemas. Con una sola publicación aparece en gris. Solo vuelve atrás el código: la base de datos queda como está.
+
+El aviso «Deployment Retention is enabled for this project» es normal: Vercel borra con el tiempo las publicaciones viejas, nunca la actual.
+
+### Tu dirección y un dominio propio
+
+En **Domains** está la dirección de tu FChat. Si tienes un dominio propio y quieres usarlo, toca **Add Existing** y sigue los pasos de Vercel para conectarlo. Después:
+
+1. [Vuelve a publicar](#volver-a-publicar).
+2. Abre FChat con la dirección nueva y revisa que los botones Copiar de **Vincula tus redes** la muestren. Si siguen con la dirección vieja, carga `PUBLIC_URL` con la nueva, como `https://fchat.tudominio.com`, y vuelve a publicar.
+3. En Meta, cambia la URL del webhook y la URL de redireccionamiento por las nuevas, como en [docs/configurar-meta.md](docs/configurar-meta.md).
+
 ## Si algo no funciona
 
 | Qué pasa | Qué revisar |
@@ -203,22 +396,28 @@ Todas las personas que interactuaron con tus automatizaciones: si te siguen, si 
 | No llega el mensaje al comentar | Comenta desde **otra cuenta**. La automatización tiene que decir **Activa** y estar en ese post. La app de Meta tiene que estar **Publicada** y el webhook verificado. |
 | Llega el primer mensaje pero el botón no hace nada | En Meta, **messaging_postbacks** tiene que estar en **Suscritos**. En Instagram, **Permitir acceso a los mensajes** tiene que estar activo. |
 | Meta responde «API access blocked» | En Meta, revisa **Acciones requeridas** y la campana de avisos y completa lo que pida. Suele resolverse en unas horas. |
-| El webhook no verifica | La dirección termina en `/webhook` y el token es idéntico al de FChat. |
+| El webhook no verifica | Usa la dirección de **Domains** con `/webhook` al final, no la dirección larga de un deploy. El token tiene que ser idéntico al de FChat. Mira [Qué dirección usar](#qué-dirección-usar). |
+| Al abrir FChat aparece «Log in to Vercel» | Abriste la dirección larga de un deploy. Entra con la de **Domains**, como `tu-fchat.vercel.app`. |
 | «Conectar Instagram» da error | Pegaste el identificador de la app **de Instagram**, no el de Meta, y guardaste la URL de redireccionamiento en Meta. Como respaldo, conéctalo con un token. |
 | Le pide que te siga aunque ya te sigue | Que toque **Siguiendo** otra vez. Si nunca lo reconoce, cambia **Veces que se lo pide** a un número. |
 | La pantalla de instalación ya no aparece y no creaste la cuenta | Recupera el acceso como en [Si olvidas tu contraseña](#si-olvidas-tu-contraseña). |
 
-Cada caso está explicado con más detalle en [docs/configurar-meta.md](docs/configurar-meta.md#si-algo-no-funciona). En Vercel › tu proyecto › **Logs** ves cada aviso que llega de Meta y cada error.
+Cada caso está explicado con más detalle en [docs/configurar-meta.md](docs/configurar-meta.md#si-algo-no-funciona). En Vercel › tu proyecto › **Logs** ves cada aviso que llega de Meta y cada error: mira [Ver los registros](#ver-los-registros).
 
 ## Si olvidas tu contraseña
 
-En Vercel › tu proyecto › **Settings** › **Environment Variables**, agrega `OWNER_EMAIL` con tu email y `OWNER_PASSWORD` con una contraseña nueva de 12 caracteres o más. Después ve a **Deployments** y vuelve a desplegar el último. Al arrancar, FChat pone esa contraseña y cierra todas las sesiones abiertas.
+En Vercel › tu proyecto › **Environment Variables**, agrega dos variables, como en [Cargar o cambiar una variable](#cargar-o-cambiar-una-variable):
+
+- `OWNER_EMAIL`, de tipo **Config**: el mismo email con el que creaste tu cuenta.
+- `OWNER_PASSWORD`, de tipo **Secret**: una contraseña nueva de 12 caracteres o más. Si es más corta, FChat no la aplica y lo avisa en **Logs**.
+
+Después [vuelve a publicar](#volver-a-publicar). Al arrancar, FChat pone esa contraseña y cierra todas las sesiones abiertas. Entra con tu email y la contraseña nueva.
 
 Mientras esas dos variables estén cargadas, la contraseña se cambia solo desde Vercel. Si las borras, vuelves a cambiarla desde **Ajustes** › **Seguridad**.
 
 ## Variables de entorno
 
-Todas son opcionales. Sirven para quien prefiere configurar FChat desde Vercel en lugar de desde el panel.
+Todas son opcionales. Sirven para quien prefiere configurar FChat desde Vercel en lugar de desde el panel. Cómo cargarlas está en [Cargar o cambiar una variable](#cargar-o-cambiar-una-variable).
 
 | Variable | Para qué |
 | --- | --- |

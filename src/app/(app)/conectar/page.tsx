@@ -318,7 +318,7 @@ async function Guide() {
       done: connected,
       body: (
         <>
-          <Where>En la misma pantalla de Meta, busca Configurar el inicio de sesión para empresas de Instagram.</Where>
+          <Where>En la misma pantalla de Meta, busca Configurar el inicio de sesión de empresa de Instagram.</Where>
           <CopyField
             label="URL de redireccionamiento de OAuth válida"
             value={`${url}/api/instagram/callback`}
@@ -360,7 +360,7 @@ async function Guide() {
           <List>
             <li>Elige una categoría, sube un ícono y guarda los cambios.</li>
             <li>
-              Arriba de todo, cambia el modo de la app a <strong>Publicado</strong>.
+              En el menú de la izquierda toca <strong>Publicar</strong> y después el botón <strong>Publicar</strong> de abajo a la derecha.
             </li>
           </List>
           <p className="text-xs text-muted-foreground">

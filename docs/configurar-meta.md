@@ -8,7 +8,7 @@ Tarda unos 15 minutos y se hace una sola vez. Funciona igual en Windows y en Mac
 
 En el panel, cada dato que tienes que pegar en Meta tiene un botón **Copiar** y ya viene con la dirección de tu FChat. En esta guía aparece como `https://tu-fchat.vercel.app`: cámbiala por la tuya. Cada paso se marca solo en FChat cuando detecta que lo hiciste.
 
-Los paneles de Meta cambian seguido. Si un botón tiene otro nombre, busca el más parecido. Las capturas son de noviembre de 2026.
+Los paneles de Meta, Vercel y GitHub cambian seguido. Si un botón tiene otro nombre, busca el más parecido. Las capturas son de noviembre de 2026.
 
 **En esta guía**
 
@@ -98,6 +98,8 @@ En la misma pantalla de Meta, abre la sección **3. Configurar webhooks**:
 3. Toca **Verificar y guardar**. Cuando Meta lo verifica, en FChat aparece «Meta verificó tu webhook.» y el paso se marca solo.
 4. En la tabla de campos de abajo, activa **Suscritos** en **comments**, **messages** y **messaging_postbacks**. El resto puede quedar apagado.
 
+En la captura aparecen todos los campos en **Suscritos** porque es una app de prueba. Para FChat alcanzan esos tres: no hace falta activar los demás.
+
 Arriba de esa sección Meta avisa «Para recibir webhooks, la app debe estar publicada». Es normal: la publicas en el paso 6.
 
 Si falla la verificación:
@@ -127,7 +129,7 @@ Al volver, FChat muestra «¡Instagram conectado!» y tu cuenta aparece en **Tus
 
 Si en el navegador tienes abierta otra cuenta de Instagram, Instagram conecta esa. Cierra sesión en instagram.com o usa una ventana de incógnito antes de tocar **Conectar Instagram**.
 
-**Si el botón no funciona, conéctalo con un token.** En Meta, en la sección **2. Generar tokens de acceso**, toca **Agregar cuenta** y entra con tu Instagram. Al lado de tu cuenta toca **Generar token** y cópialo. Pégalo en Vercel › tu proyecto › **Settings** › **Environment Variables** como `IG_ACCESS_TOKEN` y vuelve a desplegar desde **Deployments**. FChat lo importa al arrancar y después lo renueva solo.
+**Si el botón no funciona, conéctalo con un token.** En Meta, en la sección **2. Generar tokens de acceso**, toca **Agregar cuenta** y entra con tu Instagram. Al lado de tu cuenta toca **Generar token** y cópialo. Pégalo en Vercel como la variable `IG_ACCESS_TOKEN`, de tipo **Secret**, y vuelve a publicar con **Redeploy**. Los dos pasos están explicados con capturas en el README, en [Cargar o cambiar una variable](../README.md#cargar-o-cambiar-una-variable) y [Volver a publicar](../README.md#volver-a-publicar). FChat lo importa al arrancar y después lo renueva solo.
 
 ![Sección Generar tokens de acceso en Meta](img/meta-08-tokens.webp)
 
@@ -152,6 +154,8 @@ Mientras la app está en modo Desarrollo, Meta solo avisa los comentarios de las
 2. En el menú de la izquierda, toca **Publicar** y después el botón **Publicar** de abajo a la derecha. Al terminar, al lado de **Publicar** aparece **Publicada**.
 
    ![Página Publicar con la app publicada](img/meta-14-publicar.webp)
+
+   La captura es de una app que ya estaba publicada: por eso dice **Publicada**. En la tuya, esa palabra aparece recién después de tocar el botón **Publicar**.
 
 3. La sección **5. Completar la revisión de la app** se puede saltear: Meta aclara que no hace falta si solo usas la app para tus propias cuentas. No envíes la app a revisión.
 
