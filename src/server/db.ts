@@ -80,18 +80,32 @@ async function openPostgres(url: string): Promise<Db> {
 
 const MIGRATIONS_DIR = path.join(process.cwd(), "db", "migrations")
 
+// Candado de las migraciones. En la primera visita a una instalación nueva de Vercel
+// arrancan varias funciones a la vez y todas quieren migrar la base vacía: sin esto,
+// la segunda repetía la migración que la primera ya había aplicado, fallaba con
+// «column ... already exists» y la página daba «Internal Server Error». Con el candado,
+// la segunda espera a la primera y después saltea lo que ya quedó aplicado.
+const MIGRATIONS_LOCK = 7_316_204_118
+
 export async function migrate(db: Db, dir = MIGRATIONS_DIR): Promise<string[]> {
-  await db.exec(`create table if not exists _migrations (name text primary key, applied_at timestamptz not null default now())`)
+  await db.tx(async (q) => {
+    await q.query("select pg_advisory_xact_lock($1)", [MIGRATIONS_LOCK])
+    await q.exec(`create table if not exists _migrations (name text primary key, applied_at timestamptz not null default now())`)
+  })
   const done = new Set((await db.query<{ name: string }>("select name from _migrations")).map((r) => r.name))
   const applied: string[] = []
   for (const file of readdirSync(/*turbopackIgnore: true*/ dir).filter((f) => f.endsWith(".sql")).sort()) {
     if (done.has(file)) continue
     const sql = readFileSync(path.join(/*turbopackIgnore: true*/ dir, file), "utf8")
-    await db.tx(async (q) => {
+    const ran = await db.tx(async (q) => {
+      await q.query("select pg_advisory_xact_lock($1)", [MIGRATIONS_LOCK])
+      // otra función pudo aplicarla mientras esta esperaba el candado
+      if ((await q.query("select 1 from _migrations where name = $1", [file])).length) return false
       await q.exec(sql)
       await q.query("insert into _migrations (name) values ($1)", [file])
+      return true
     })
-    applied.push(file)
+    if (ran) applied.push(file)
   }
   return applied
 }
