@@ -1,7 +1,7 @@
 /**
- * Normaliza una palabra clave o un comentario para compararlos:
- * minúsculas, sin acentos, sin puntuación ni emojis, espacios simples.
- * Es la misma función que usa el motor al recibir un comentario.
+ * Normalizes a keyword or a comment so they can be compared:
+ * lowercase, no accents, no punctuation or emojis, single spaces.
+ * It is the same function the engine uses when a comment arrives.
  */
 export function normalizeKeyword(input: string): string {
   return input
@@ -13,7 +13,7 @@ export function normalizeKeyword(input: string): string {
     .trim()
 }
 
-/** "contains" por palabra completa: "link" coincide con "pasame el link!" pero no con "linkedin". */
+/** Whole-word "contains": "link" matches "send me the link!" but not "linkedin". */
 export function matchesKeyword(text: string, keyword: string): boolean {
   const t = ` ${normalizeKeyword(text)} `
   const k = normalizeKeyword(keyword)

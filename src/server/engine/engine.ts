@@ -1,12 +1,12 @@
-// El motor: toma eventos de webhook_events y ejecuta las automatizaciones.
+// The engine: takes events from webhook_events and runs the automations.
 //
-//   comentario → ¿qué trigger aplica? → contacto + run → private reply
-//   toque de botón → abre la ventana de 24 h → sigue el grafo
-//   check_follow → is_user_follow_business → rama sí / no
+//   comment → which trigger applies? → contact + run → private reply
+//   button tap → opens the 24 h window → follows the graph
+//   check_follow → is_user_follow_business → yes / no branch
 //
-// Cada evento se reclama marcándolo 'done' antes de procesarlo (a lo sumo una
-// vez). Lo que falla queda 'failed' con el error. Los envíos repetidos se
-// evitan con las restricciones únicas de la base y el avance optimista del run.
+// Each event is claimed by marking it 'done' before processing it, at most once.
+// Whatever fails stays 'failed' with the error. Repeated sends are prevented by
+// the database unique constraints and the run's optimistic advance.
 
 import type { Db } from "../db"
 import { decrypt } from "../crypto"
@@ -64,10 +64,10 @@ type Ctx = EngineDeps & { account: Account; token: string; graph: Graph; contact
 
 const isUnique = (e: unknown) => (e as { code?: string })?.code === "23505"
 
-/** Esperas entre reintentos de un envío, en minutos. Cubren la hora de límite de Meta. */
+/** Waits between retries of a send, in minutes. They cover Meta's one-hour limit window. */
 const RETRY_DELAYS_MIN = [1, 3, 10, 20, 30, 45]
 
-/** Errores que se arreglan solos esperando: límites de uso de Meta, errores 5xx, red o timeout. */
+/** Errors that fix themselves by waiting: Meta usage limits, 5xx errors, network or timeout. */
 function isTransient(e: unknown): boolean {
   if (!(e instanceof IgError)) return true
   if (e.status >= 500) return true
@@ -86,11 +86,11 @@ export async function processPending(deps: EngineDeps, limit = 25): Promise<numb
        returning id, field, ig_user_id, payload`,
     )
     if (!ev) break
-    deps.log?.("evento", { field: ev.field, id: ev.id })
+    deps.log?.("event", { field: ev.field, id: ev.id })
     try {
       await processEvent(deps, ev)
     } catch (e) {
-      deps.log?.("evento falló", { id: ev.id, error: String(e) })
+      deps.log?.("event failed", { id: ev.id, error: String(e) })
       await deps.db.query(`update webhook_events set status = 'failed', error = $2 where id = $1`, [ev.id, String(e)])
     }
   }
@@ -103,7 +103,7 @@ async function processEvent(deps: EngineDeps, ev: { id: string; field: string; i
     [ev.ig_user_id],
   )
   if (!account || account.status !== "ok") {
-    await deps.db.query(`update webhook_events set status = 'ignored', error = 'cuenta desconocida o inactiva' where id = $1`, [ev.id])
+    await deps.db.query(`update webhook_events set status = 'ignored', error = 'unknown or inactive account' where id = $1`, [ev.id])
     return
   }
   const token = decrypt(account.access_token_enc, deps.encKey)
@@ -129,7 +129,7 @@ async function onComment(deps: EngineDeps, account: Account, token: string, c: C
   const igsid = c.from?.id
   const mediaId = c.media?.id
   if (!igsid || !mediaId) return
-  if (igsid === account.ig_user_id) return // nuestros propios comentarios y respuestas públicas
+  if (igsid === account.ig_user_id) return // our own comments and public replies
 
   const [ce] = await db.query<{ id: string }>(
     `insert into comment_events (ig_account_id, comment_id, media_id, igsid, username, text, commented_at)
@@ -137,7 +137,7 @@ async function onComment(deps: EngineDeps, account: Account, token: string, c: C
      on conflict (ig_account_id, comment_id) do nothing returning id`,
     [account.id, c.id, mediaId, igsid, c.from?.username ?? null, c.text ?? ""],
   )
-  if (!ce) return // ya lo vimos
+  if (!ce) return // already seen
 
   const trigger = await matchTrigger(deps, account, token, mediaId, c.text ?? "")
   if (!trigger) {
@@ -165,15 +165,15 @@ async function onComment(deps: EngineDeps, account: Account, token: string, c: C
     ])
   } catch (e) {
     if (!isUnique(e)) throw e
-    // ya le respondimos a esta persona en este post con este trigger
+    // we already replied to this person on this post with this trigger
     await db.query(
-      `update comment_events set status = 'ignored', contact_id = $2, error = '{"reason":"ya respondido en este post"}' where id = $1`,
+      `update comment_events set status = 'ignored', contact_id = $2, error = '{"reason":"already answered on this post"}' where id = $1`,
       [ce.id, contact.id],
     )
     return
   }
 
-  // si tenía un run vivo de esta automatización, se cancela y arranca uno nuevo
+  // if they had a live run of this automation, it is cancelled and a new one starts
   await db.query(
     `update flow_runs set status = 'cancelled', finished_at = now()
      where contact_id = $1 and automation_id = $2 and status in ('running','waiting')`,
@@ -189,7 +189,7 @@ async function onComment(deps: EngineDeps, account: Account, token: string, c: C
   await publicReply(deps, token, ce.id, c.id, trigger, run)
 }
 
-/** Una respuesta al azar bajo el comentario, solo si el DM salió. Si falla, no frena nada. */
+/** A random reply under the comment, only if the DM went out. If it fails, nothing stops. */
 async function publicReply(deps: EngineDeps, token: string, ceId: string, commentId: string, trigger: Trigger, run: Run) {
   if (!trigger.public_replies.length) return
   const [ce] = await deps.db.query<{ status: string }>(`select status from comment_events where id = $1`, [ceId])
@@ -200,7 +200,7 @@ async function publicReply(deps: EngineDeps, token: string, ceId: string, commen
     await deps.db.query(`update comment_events set public_reply_id = $2 where id = $1`, [ceId, r.id])
     await event(deps.db, run, "public_replied")
   } catch (e) {
-    deps.log?.("respuesta pública falló", { comment: commentId, error: String(e) })
+    deps.log?.("public reply failed", { comment: commentId, error: String(e) })
   }
 }
 
@@ -216,7 +216,7 @@ async function matchTrigger(deps: EngineDeps, account: Account, token: string, m
     if (t.match === "any" || t.keywords_include.length === 0) return true
     return t.keywords_include.some((k) => matchesKeyword(text, k))
   }
-  // primero los que tienen palabras (son más específicos), después los genéricos; dentro de cada grupo, el más viejo
+  // first the ones with keywords, which are more specific, then the generic ones; within each group, the oldest
   const ordered = [...triggers.filter((t) => t.keywords_include.length), ...triggers.filter((t) => !t.keywords_include.length)]
   for (const t of ordered) {
     if (!ok(t)) continue
@@ -224,7 +224,7 @@ async function matchTrigger(deps: EngineDeps, account: Account, token: string, m
     if (t.post_scope === "next") {
       if (t.media_id && t.media_id !== mediaId) continue
       if (!t.media_id) {
-        // Instagram no avisa cuando publicás: el primer comentario en un post nuevo lo asigna
+        // Instagram does not notify new posts: the first comment on a new post assigns it
         const media = await deps.ig.getMedia(token, mediaId).catch(() => null)
         if (!media || !t.armed_at || new Date(media.timestamp) <= t.armed_at) continue
         await deps.db.query(`update triggers set media_id = $2 where id = $1 and media_id is null`, [t.id, mediaId])
@@ -235,7 +235,7 @@ async function matchTrigger(deps: EngineDeps, account: Account, token: string, m
   return null
 }
 
-// ─── toques de botón y mensajes ──────────────────────────────────────────
+// ─── button taps and messages ──────────────────────────────────────────────
 
 type MessagingEvent = {
   sender: { id: string }
@@ -261,7 +261,7 @@ async function onTap(
   const p = parsePayload(payload)
   if (!p) return
   const [run] = await db.query<Run>(`select * from flow_runs where id = $1 and contact_id = $2`, [p.runId, contact.id])
-  if (!run || run.status !== "waiting") return // no es de esta persona, o ya avanzó (toque repetido)
+  if (!run || run.status !== "waiting") return // not this person's, or it already moved on, as in a repeated tap
   const [v] = await db.query<{ graph: Graph }>(`select graph from automation_versions where id = $1`, [run.version_id])
   const node = findNode(v.graph, run.current_node)
   if (!node || node.type !== "send_message") return
@@ -285,10 +285,10 @@ async function onInboundText(deps: EngineDeps, account: Account, m: MessagingEve
     m.message?.mid ?? null,
     JSON.stringify({ text: m.message?.text ?? "" }),
   ])
-  // Disparadores por palabra en DM: hito 3.
+  // Keyword triggers in DMs: milestone 3.
 }
 
-// ─── ejecución del grafo ─────────────────────────────────────────────────
+// ─── graph execution ─────────────────────────────────────────────────────
 
 async function advance(ctx: Ctx, startId: string, expectedNode: string | null) {
   const { db } = ctx
@@ -298,7 +298,7 @@ async function advance(ctx: Ctx, startId: string, expectedNode: string | null) {
     const node = findNode(ctx.graph, id)
     if (!node) return fail(ctx, `nodo inexistente: ${id}`)
 
-    // avance optimista: si otro proceso ya movió el run, este se detiene
+    // optimistic advance: if another process already moved the run, this one stops
     const [moved] = await db.query<Run>(
       `update flow_runs set current_node = $2 where id = $1 and status = 'running'
        and current_node is not distinct from $3 returning *`,
@@ -315,7 +315,7 @@ async function advance(ctx: Ctx, startId: string, expectedNode: string | null) {
       continue
     }
 
-    // send_message. Sin max_loops el nodo se repite sin tope: «hasta que me siga».
+    // send_message. Without max_loops the node repeats with no limit: "until they follow".
     const loops = ctx.run.vars.loops?.[node.id] ?? 0
     if (node.max_loops && loops >= node.max_loops) {
       id = node.on_max
@@ -323,7 +323,7 @@ async function advance(ctx: Ctx, startId: string, expectedNode: string | null) {
     }
     const sent = await send(ctx, node)
     if (!sent) return
-    // se cuenta después de enviar: un envío que falló y se reintenta no gasta un pedido
+    // counted after sending: a send that failed and is retried does not use up an ask
     if (node.max_loops) {
       const vars = { ...ctx.run.vars, loops: { ...ctx.run.vars.loops, [node.id]: loops + 1 } }
       await db.query(`update flow_runs set vars = $2 where id = $1`, [ctx.run.id, JSON.stringify(vars)])
@@ -347,13 +347,13 @@ async function send(ctx: Ctx, node: SendMessageNode): Promise<boolean> {
       `select comment_id, created_at from comment_events where id = $1`,
       [ctx.run.comment_event_id],
     )
-    if (!ce) return fail(ctx, "respuesta privada sin comentario")
-    if (now.getTime() - ce.created_at.getTime() > PRIVATE_REPLY_MS) return expire(ctx, "pasaron más de 7 días desde el comentario")
+    if (!ce) return fail(ctx, "private reply without a comment")
+    if (now.getTime() - ce.created_at.getTime() > PRIVATE_REPLY_MS) return expire(ctx, "more than 7 days have passed since the comment")
     recipient = { comment_id: ce.comment_id }
   } else {
     const [c] = await db.query<Contact>(`select id, igsid, last_inbound_at from contacts where id = $1`, [ctx.contact.id])
     if (!c.last_inbound_at || now.getTime() - c.last_inbound_at.getTime() > WINDOW_MS) {
-      return expire(ctx, "la ventana de 24 h está cerrada")
+      return expire(ctx, "the 24 h window is closed")
     }
     recipient = { id: c.igsid }
   }
@@ -378,11 +378,11 @@ async function send(ctx: Ctx, node: SendMessageNode): Promise<boolean> {
       ctx.run.attempts = 0
     }
     if (node.step) await event(db, ctx.run, node.step)
-    ctx.log?.("enviado", { node: node.id, to: node.private_reply ? "comentario" : "dm", mid: res.message_id })
+    ctx.log?.("sent", { node: node.id, to: node.private_reply ? "comentario" : "dm", mid: res.message_id })
     return true
   } catch (e) {
     const err = e instanceof IgError ? { message: e.message, code: e.code, status: e.status } : { message: String(e) }
-    // Límite de Meta, caída momentánea o red: se reintenta más tarde en vez de perder a la persona
+    // Meta limit, a brief outage or network: retried later instead of losing the person
     const attempts = ctx.run.attempts ?? 0
     if (isTransient(e) && attempts < RETRY_DELAYS_MIN.length) {
       const resumeAt = new Date(now.getTime() + RETRY_DELAYS_MIN[attempts] * 60_000)
@@ -391,7 +391,7 @@ async function send(ctx: Ctx, node: SendMessageNode): Promise<boolean> {
          error = $3 where id = $1`,
         [ctx.run.id, resumeAt, JSON.stringify({ ...err, retry: attempts + 1 })],
       )
-      ctx.log?.("envío postergado", { run: ctx.run.id, node: node.id, retry: attempts + 1, at: resumeAt.toISOString(), error: err.message })
+      ctx.log?.("send postponed", { run: ctx.run.id, node: node.id, retry: attempts + 1, at: resumeAt.toISOString(), error: err.message })
       return false
     }
     await db.query(
@@ -420,8 +420,8 @@ async function checkFollow(ctx: Ctx): Promise<boolean> {
     )
     return follows
   } catch (e) {
-    // sin poder chequear, se trata como "no te sigue": el tope de reintentos evita un bucle
-    ctx.log?.("chequeo de follow falló", { contact: ctx.contact.id, error: String(e) })
+    // when it cannot be checked, it is treated as "does not follow": the retry limit prevents a loop
+    ctx.log?.("follow check failed", { contact: ctx.contact.id, error: String(e) })
     return false
   }
 }
@@ -438,7 +438,7 @@ async function upsertContact(db: Db, accountId: string, igsid: string, username?
        last_inbound_at = case when $4 then now() else contacts.last_inbound_at end,
        last_message_at = case when $4 then now() else contacts.last_message_at end,
        unread_count = contacts.unread_count + case when $4 then 1 else 0 end,
-       -- si escribe en una conversación cerrada de la bandeja, se vuelve a abrir
+       -- if they write in a closed inbox conversation, it opens again
        inbox_status = case when $4 then 'open' else contacts.inbox_status end
      returning id, igsid, last_inbound_at`,
     [accountId, igsid, username ?? null, Boolean(o.inbound)],
@@ -463,7 +463,7 @@ async function finish(db: Db, runId: string, status: "done" | "expired" | "faile
 }
 
 async function fail(ctx: Ctx, why: string): Promise<false> {
-  ctx.log?.("run falló", { run: ctx.run.id, why })
+  ctx.log?.("run failed", { run: ctx.run.id, why })
   await finish(ctx.db, ctx.run.id, "failed", why)
   return false
 }
@@ -473,7 +473,7 @@ async function expire(ctx: Ctx, why: string): Promise<false> {
   return false
 }
 
-/** Runs con un envío postergado cuya hora ya llegó: se retoman en el mismo nodo. */
+/** Runs with a postponed send whose time has come: they resume at the same node. */
 export async function resumeDueRuns(deps: EngineDeps, limit = 10): Promise<number> {
   const { db } = deps
   const now = (deps.now ?? (() => new Date()))()
@@ -497,24 +497,24 @@ export async function resumeDueRuns(deps: EngineDeps, limit = 10): Promise<numbe
         [run.contact_id, run.version_id],
       )
       if (!row || row.status !== "ok") {
-        await finish(db, run.id, "failed", "cuenta desconocida o inactiva")
+        await finish(db, run.id, "failed", "unknown or inactive account")
         continue
       }
       const account: Account = { id: row.id, ig_user_id: row.ig_user_id, username: row.username, access_token_enc: row.access_token_enc, status: row.status }
       const token = decrypt(account.access_token_enc, deps.encKey)
       const contact: Contact = { id: run.contact_id, igsid: row.contact_igsid, last_inbound_at: row.last_inbound_at }
-      deps.log?.("reintento", { run: run.id, node: run.current_node, attempt: run.attempts })
+      deps.log?.("retry", { run: run.id, node: run.current_node, attempt: run.attempts })
       await advance({ ...deps, account, token, graph: row.graph, contact, run }, run.current_node ?? row.graph.start, run.current_node)
       await publicReplyAfterRetry(deps, token, run)
     } catch (e) {
-      deps.log?.("reintento falló", { run: run.id, error: String(e) })
+      deps.log?.("retry failed", { run: run.id, error: String(e) })
       await finish(db, run.id, "failed", String(e))
     }
   }
   return n
 }
 
-/** Si el primer DM salió en un reintento, la respuesta pública que quedó pendiente sale ahora. */
+/** If the first DM went out on a retry, the pending public reply goes out now. */
 async function publicReplyAfterRetry(deps: EngineDeps, token: string, run: Run) {
   if (!run.comment_event_id) return
   const [ce] = await deps.db.query<{ comment_id: string; status: string; public_reply_id: string | null; trigger_id: string | null }>(
@@ -528,11 +528,11 @@ async function publicReplyAfterRetry(deps: EngineDeps, token: string, run: Run) 
   if (trigger) await publicReply(deps, token, run.comment_event_id, ce.comment_id, trigger, run)
 }
 
-/** Runs esperando un botón cuya ventana ya cerró (cada 10 min). */
+/** Runs waiting for a button whose window has closed, every 10 minutes. */
 export async function expireStaleRuns(db: Db): Promise<number> {
   const rows = await db.query(
     `update flow_runs r set status = 'expired', finished_at = now(), waiting_for = null,
-       error = '{"message":"la ventana cerró esperando un toque"}'
+       error = '{"message":"the window closed while waiting for a tap"}'
      from contacts c
      where c.id = r.contact_id and r.status = 'waiting' and r.waiting_for = 'button'
        and r.started_at < now() - interval '7 days'

@@ -3,8 +3,10 @@
 import { useId } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { fmt } from "@/lib/i18n/locale"
+import { useT } from "@/components/i18n"
 
-/** Área de texto con contador. Avisa al pasarse del máximo, no corta lo que escribiste. */
+/** Textarea with a counter. Warns when over the limit, never cuts what was typed. */
 export function CountedTextarea({
   label,
   value,
@@ -25,8 +27,9 @@ export function CountedTextarea({
   disabled?: boolean
 }) {
   const id = useId()
+  const { t } = useT()
   const over = value.length > max
-  const message = error ?? (over ? `Instagram acepta hasta ${max} caracteres.` : undefined)
+  const message = error ?? (over ? fmt(t.ui.igMax, { n: max }) : undefined)
   return (
     <div className="grid gap-1.5">
       <div className="flex items-baseline justify-between gap-2">

@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { Loader2Icon } from "lucide-react"
 import { cn } from "cn"
 
-// Tamaños: sm 32 · md 40 · lg 48
+// Sizes: sm 32 · md 40 · lg 48
 const buttonVariants = cva(
   "group/button relative inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-semibold whitespace-nowrap transition-all outline-none select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:not-aria-[haspopup]:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
@@ -36,7 +36,7 @@ const buttonVariants = cva(
 
 type ButtonProps = ButtonPrimitive.Props &
   VariantProps<typeof buttonVariants> & {
-    /** Muestra un spinner, mantiene el ancho y deja el texto para lectores de pantalla. */
+    /** Shows a spinner, keeps the width and leaves the text for screen readers. */
     loading?: boolean
   }
 
@@ -62,7 +62,7 @@ function Button({
           <Loader2Icon className="animate-spin" />
         </span>
       )}
-      {/* opacity y no visibility: el texto sigue disponible para lectores de pantalla */}
+      {/* opacity, not visibility: the text stays available to screen readers */}
       <span className={cn("contents", loading && "[&>*]:opacity-0")}>
         {loading ? <span>{children}</span> : children}
       </span>

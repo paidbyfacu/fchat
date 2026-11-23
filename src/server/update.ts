@@ -1,6 +1,6 @@
-// Versiones y actualizaciones automáticas. Cada instalación compara su versión con
-// la del repositorio oficial. Si tiene el workflow de actualización, GitHub la
-// actualiza solo cada 4 horas y Vercel publica el cambio.
+// Versions and automatic updates. Each installation compares its version with the
+// official repository's. If it has the update workflow, GitHub updates it every
+// 4 hours and Vercel deploys the change.
 
 import { cacheLife } from "next/cache"
 import pkg from "../../package.json"
@@ -10,7 +10,7 @@ import { WORKFLOW_PATH, WORKFLOW_YAML } from "@/lib/update-workflow"
 export const APP_VERSION: string = pkg.version
 export const UPSTREAM_REPO = "paidbyfacu/fchat"
 
-/** Versión publicada en el repositorio oficial, o null si GitHub no responde. Se consulta como mucho una vez por hora. */
+/** Version published in the official repository, or null if GitHub does not respond. Checked at most once an hour. */
 export async function latestVersion(): Promise<string | null> {
   "use cache"
   cacheLife("hours")
@@ -30,9 +30,9 @@ export type UpdateInfo = {
   current: string
   latest: string | null
   outdated: boolean
-  /** Si el repositorio de esta instalación tiene el workflow, según el último deploy. */
+  /** Whether this installation's repository has the workflow, as of the last deploy. */
   autoUpdate: boolean
-  /** Repositorio de GitHub de esta instalación, si corre en Vercel. */
+  /** This installation's GitHub repository, if it runs on Vercel. */
   repo: { owner: string; slug: string; branch: string } | null
   isUpstream: boolean
   onVercel: boolean
@@ -49,19 +49,19 @@ export async function updateInfo(): Promise<UpdateInfo> {
     outdated: isNewer(latest, APP_VERSION),
     autoUpdate: process.env.FCHAT_AUTOUPDATE === "1",
     repo,
-    // la cuenta que publica FChat: sus repositorios son el origen de las versiones, no se actualizan desde afuera
+    // the account that publishes FChat: its repositories are the source of versions and are not updated from outside
     isUpstream: !!repo && repo.owner.toLowerCase() === UPSTREAM_REPO.split("/")[0],
     onVercel: !!process.env.VERCEL,
   }
 }
 
-/** Link de GitHub que abre el archivo del workflow ya escrito: solo falta tocar «Commit changes». */
+/** GitHub link that opens the workflow file already written: only "Commit changes" is left. */
 export function createWorkflowUrl(repo: NonNullable<UpdateInfo["repo"]>): string {
   const q = new URLSearchParams({ filename: WORKFLOW_PATH, value: WORKFLOW_YAML })
   return `https://github.com/${repo.owner}/${repo.slug}/new/${encodeURIComponent(repo.branch)}?${q}`
 }
 
-/** Página del workflow en GitHub, con el botón «Run workflow» para actualizar en el momento. */
+/** The workflow page on GitHub, with the "Run workflow" button to update right away. */
 export function runWorkflowUrl(repo: NonNullable<UpdateInfo["repo"]>): string {
   return `https://github.com/${repo.owner}/${repo.slug}/actions/workflows/actualizar-fchat.yml`
 }

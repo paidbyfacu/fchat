@@ -6,6 +6,7 @@ import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
+import { useT } from "@/components/i18n"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -47,6 +48,7 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
 }) {
+  const { t } = useT()
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -72,7 +74,7 @@ function DialogContent({
           >
             <XIcon
             />
-            <span className="sr-only">Cerrar</span>
+            <span className="sr-only">{t.common.close}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>

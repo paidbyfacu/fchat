@@ -4,23 +4,23 @@ import { env } from "@/server/env"
 import { getDb } from "@/server/db"
 import { bootstrap, runCycle } from "@/server/worker"
 
-// Lo llama el cron de Vercel, o un cron externo: reintentos pendientes, runs
-// colgados y tokens por vencer. Con CRON_SECRET solo entra quien lo manda. Sin
-// él, cualquiera puede llamarlo, pero corre como mucho una vez cada 10 minutos.
+// Called by the Vercel cron or an external one: pending retries, stuck runs and
+// tokens about to expire. With CRON_SECRET only whoever sends it gets in. Without
+// it anyone can call it, but it runs at most once every 10 minutes.
 export async function GET(req: NextRequest) {
-  await connection() // siempre en el request, nunca al construir: sin secreto no lee nada del pedido
+  await connection() // always at request time, never at build: without a secret it reads nothing from the request
   const secret = env.cronSecret()
   if (secret) {
     if (!safeEqual(req.headers.get("authorization"), `Bearer ${secret}`)) return new NextResponse("forbidden", { status: 403 })
   } else if (!(await claimSlot())) {
-    return NextResponse.json({ ok: true, skipped: "corrió hace menos de 10 minutos" })
+    return NextResponse.json({ ok: true, skipped: "ran less than 10 minutes ago" })
   }
   await bootstrap()
   const r = await runCycle({ expire: true, refresh: true })
   return NextResponse.json({ ok: true, ...r })
 }
 
-/** Reserva el turno del cron sin secreto: true si pasaron 10 minutos desde el último. */
+/** Claims the turn of the secretless cron: true if 10 minutes have passed since the last one. */
 async function claimSlot(): Promise<boolean> {
   const rows = await (await getDb()).query(
     `insert into app_settings (key, value) values ('cron_last_open', now()::text)

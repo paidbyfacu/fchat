@@ -5,10 +5,10 @@ import { igApp, secrets } from "@/server/config"
 
 const SCOPES = ["instagram_business_basic", "instagram_business_manage_messages", "instagram_business_manage_comments"]
 
-// Arranca el login de Instagram (Business Login). El state firmado evita que
-// otro sitio complete la conexión en tu nombre.
+// Starts the Instagram Business Login. The signed state keeps another site from
+// completing the connection on your behalf.
 export async function GET(req: NextRequest) {
-  await connection() // siempre en el request, nunca al construir
+  await connection() // always at request time, never at build
   const app = await igApp().catch(() => null)
   if (!app) return NextResponse.redirect(new URL("/conectar?error=config", req.url))
   const appId = app.appId

@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 export type Option = { value: string; label: string; hint?: string; disabled?: boolean }
 
 /**
- * Filas de opción del asistente: toda la fila es el objetivo del click,
- * flechas para moverse (lo resuelve RadioGroup), foco visible en la fila.
+ * Wizard option rows: the whole row is the click target, arrow keys move
+ * between rows, handled by RadioGroup, and focus is visible on the row.
  */
 export function OptionGroup({
   label,

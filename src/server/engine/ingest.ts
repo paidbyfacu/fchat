@@ -1,5 +1,5 @@
-// Del body de un webhook de Meta a filas de webhook_events, cada una con su
-// clave de deduplicación. Meta reintenta: la misma clave dos veces = una fila.
+// From a Meta webhook body to webhook_events rows, each with its deduplication
+// key. Meta retries: the same key twice = one row.
 
 import type { Db } from "../db"
 
@@ -31,7 +31,7 @@ export function toIngestItems(body: unknown): IngestItem[] {
       }
     }
     for (const m of e.messaging ?? []) {
-      // los "read" y los ecos de nuestros propios envíos no se guardan
+      // "read" events and echoes of our own sends are not stored
       if (m.read || m.message?.is_echo) continue
       if (m.postback) {
         const key = m.postback.mid ?? `${m.sender?.id}:${m.timestamp}:${m.postback.payload}`
@@ -44,7 +44,7 @@ export function toIngestItems(body: unknown): IngestItem[] {
   return items
 }
 
-/** Guarda lo nuevo y devuelve cuántas filas se insertaron (las repetidas se ignoran). */
+/** Stores what is new and returns how many rows were inserted; repeated ones are ignored. */
 export async function ingest(db: Db, items: IngestItem[]): Promise<number> {
   let inserted = 0
   for (const it of items) {

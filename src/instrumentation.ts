@@ -1,4 +1,4 @@
-// Se ejecuta una vez al arrancar el servidor: migraciones, usuario dueño y worker.
+// Runs once when the server starts: migrations, owner user and worker.
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return
   if (process.env.WORKER === "off") return
@@ -6,8 +6,8 @@ export async function register() {
   try {
     await startWorker()
   } catch (e) {
-    // en producción no tiene sentido arrancar sin worker: que el hosting lo reinicie
+    // in production there is no point running without a worker: let the host restart it
     if (process.env.NODE_ENV === "production") throw e
-    console.error("[worker] no arrancó:", e)
+    console.error("[worker] did not start:", e)
   }
 }

@@ -1,8 +1,10 @@
-// Del asistente al grafo y al trigger. Y al revés, para abrir en el asistente
-// una automatización que no se creó con él (la sembrada del hito 1).
+// From the wizard to the graph and the trigger. And back, to open in the wizard an
+// automation that was not created with it, like the one seeded in milestone 1.
 
 import { normalizeKeyword } from "@/lib/keywords"
 import { defaultWizard, type Wizard } from "@/lib/wizard"
+import { getMessages } from "@/lib/i18n"
+import type { Locale } from "@/lib/i18n/locale"
 import type { Graph, GraphNode, SendMessageNode } from "./graph"
 
 export type CompiledTrigger = {
@@ -16,7 +18,8 @@ export type CompiledTrigger = {
 
 const clean = (words: string[]) => [...new Set(words.map(normalizeKeyword).filter(Boolean))]
 
-export function compileWizard(w: Wizard): { graph: Graph; trigger: CompiledTrigger } {
+/** `locale` is the language of the fixed texts the person receives, like the profile button. */
+export function compileWizard(w: Wizard, locale: Locale = "es"): { graph: Graph; trigger: CompiledTrigger } {
   const nodes: GraphNode[] = [
     {
       id: "open",
@@ -35,10 +38,10 @@ export function compileWizard(w: Wizard): { graph: Graph; trigger: CompiledTrigg
         type: "send_message",
         text: w.askFollow.text.trim(),
         buttons: [
-          { id: "profile", type: "profile", title: "Ir al perfil" },
+          { id: "profile", type: "profile", title: getMessages(locale).wizard.goToProfile },
           { id: "done", type: "postback", title: w.askFollow.button.trim(), next: "check" },
         ],
-        // 0 = hasta que siga: sin tope, el link nunca llega a quien no sigue
+        // 0 = until they follow: no limit, the link never reaches someone who does not follow
         ...(w.askFollow.maxAsks > 0 ? { max_loops: w.askFollow.maxAsks, on_max: "link" } : {}),
         step: "follow_asked",
       },
@@ -64,7 +67,7 @@ export function compileWizard(w: Wizard): { graph: Graph; trigger: CompiledTrigg
   }
 }
 
-/** Reconstruye el asistente desde el grafo y el trigger (si no se guardó el estado). */
+/** Rebuilds the wizard from the graph and the trigger, when its state was not saved. */
 export function wizardFromGraph(
   base: { name: string; accountId: string },
   graph: Graph | null,

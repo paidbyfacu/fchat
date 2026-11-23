@@ -6,14 +6,14 @@ import { migrate, openDb, pgConnectionString } from "./db"
 
 let dir: string | undefined
 
-describe("migraciones", () => {
+describe("migrations", () => {
   afterEach(() => {
     if (dir) rmSync(dir, { recursive: true, force: true })
     dir = undefined
   })
 
-  it("dos arranques a la vez aplican cada migración una sola vez", async () => {
-    // como la primera visita a una instalación nueva de Vercel: varias funciones migran juntas
+  it("two simultaneous starts apply each migration only once", async () => {
+    // like the first visit to a new Vercel installation: several functions migrate together
     const db = await openDb({ pgliteDir: "memory://", url: "" })
     dir = mkdtempSync(path.join(tmpdir(), "fchat-migr-"))
     writeFileSync(path.join(dir, "9001_tabla.sql"), "create table prueba_a (id int primary key);")
@@ -26,13 +26,13 @@ describe("migraciones", () => {
       `select column_name from information_schema.columns where table_name = 'prueba_a' order by column_name`,
     )
     expect(cols.map((c) => c.column_name)).toEqual(["id", "nombre"])
-    // y volver a migrar no hace nada
+    // and migrating again does nothing
     expect(await migrate(db, dir)).toEqual([])
   })
 })
 
-describe("dirección de Postgres", () => {
-  it("pide verify-full en lugar de require, sin tocar lo demás", () => {
+describe("Postgres address", () => {
+  it("asks for verify-full instead of require, without touching the rest", () => {
     const neon = "postgresql://usuario:cl%40ve@ep-ejemplo-pooler.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require"
     const out = new URL(pgConnectionString(neon))
     expect(out.searchParams.get("sslmode")).toBe("verify-full")
@@ -41,7 +41,7 @@ describe("dirección de Postgres", () => {
     expect(out.hostname).toBe("ep-ejemplo-pooler.us-east-1.aws.neon.tech")
   })
 
-  it("deja igual lo que no hace falta cambiar", () => {
+  it("leaves alone what does not need changing", () => {
     for (const url of [
       "postgres://u:p@localhost:5432/db",
       "postgres://u:p@host/db?sslmode=disable",

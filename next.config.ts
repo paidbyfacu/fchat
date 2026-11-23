@@ -2,21 +2,21 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import type { NextConfig } from "next";
 
-// Si el repositorio tiene el workflow que trae las versiones nuevas: el panel lo
-// muestra en Ajustes › Actualizaciones y deja de pedir que se active.
+// Whether the repository has the workflow that brings new versions: the dashboard
+// shows it in Settings › Updates and stops asking for it to be enabled.
 const autoUpdate = existsSync(path.join(process.cwd(), ".github/workflows/actualizar-fchat.yml"));
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  // PGlite carga su WASM desde el disco y pg usa módulos nativos opcionales: sin empaquetar
+  // PGlite loads its WASM from disk and pg uses optional native modules: not bundled
   serverExternalPackages: ["@electric-sql/pglite", "pg"],
-  // las migraciones se leen del disco al abrir la base: que viajen con las funciones de Vercel
+  // migrations are read from disk when the database opens: they ship with the Vercel functions
   outputFileTracingIncludes: { "/**": ["./db/migrations/**"] },
   poweredByHeader: false,
   env: { FCHAT_AUTOUPDATE: autoUpdate ? "1" : "0" },
-  // Capas del navegador: nadie puede meter el panel en un iframe de otro sitio para
-  // engañar clics, ni adivinar tipos de archivo, ni leer de dónde vienes. Buscadores fuera.
+  // Browser safeguards: no other site can put the dashboard in an iframe to trick
+  // clicks, guess file types or read where you came from. No search engines.
   async headers() {
     return [
       {
@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // URL corta para el webhook del panel de Meta: <tu dominio>/webhook
+  // Short URL for the webhook in the Meta dashboard: <your domain>/webhook
   async rewrites() {
     return [{ source: "/webhook", destination: "/api/webhooks/instagram" }];
   },

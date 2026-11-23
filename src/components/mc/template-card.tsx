@@ -1,8 +1,11 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowRightIcon, CircleFadingPlusIcon, ListOrderedIcon, MessageCircleIcon, RadioIcon, SendIcon, UserPlusIcon } from "lucide-react"
 import { ChannelBadge } from "@/components/mc/channel-icons"
 import type { Template, TemplateIcon } from "@/lib/templates"
 import { cn } from "@/lib/utils"
+import { useT } from "@/components/i18n"
 
 const ICONS: Record<TemplateIcon, typeof MessageCircleIcon> = {
   comment: MessageCircleIcon,
@@ -13,9 +16,10 @@ const ICONS: Record<TemplateIcon, typeof MessageCircleIcon> = {
   live: RadioIcon,
 }
 
-/** Tarjeta de plantilla, como las de «Empieza aquí» de ManyChat. Las que no están listas dicen Próximamente. */
+/** Template card for Home and Templates. The ones that are not ready say Coming soon. */
 export function TemplateCard({ t, detailed = false }: { t: Template; detailed?: boolean }) {
   const Icon = ICONS[t.icon]
+  const { t: m } = useT()
   const body = (
     <>
       <span className="flex items-start justify-between gap-3">
@@ -26,9 +30,9 @@ export function TemplateCard({ t, detailed = false }: { t: Template; detailed?: 
           </span>
         </span>
         {t.popular ? (
-          <span className="rounded-pill bg-primary px-2 py-0.5 text-[0.6875rem] font-bold tracking-wide text-primary-foreground">POPULAR</span>
+          <span className="rounded-pill bg-primary px-2 py-0.5 text-[0.6875rem] font-bold tracking-wide text-primary-foreground uppercase">{m.common.popular}</span>
         ) : !t.ready ? (
-          <span className="rounded-pill bg-muted px-2 py-0.5 text-[0.6875rem] font-semibold text-muted-foreground">Próximamente</span>
+          <span className="rounded-pill bg-muted px-2 py-0.5 text-[0.6875rem] font-semibold text-muted-foreground">{m.common.comingSoon}</span>
         ) : null}
       </span>
       <span className="grid gap-1">
@@ -46,7 +50,7 @@ export function TemplateCard({ t, detailed = false }: { t: Template; detailed?: 
         </ol>
       )}
       <span className={cn("mt-auto flex items-center gap-1 text-sm font-semibold", t.ready ? "text-link" : "text-muted-foreground")}>
-        {t.ready ? "Usar esta plantilla" : t.href ? "Ver cómo va a funcionar" : "Muy pronto"}
+        {t.ready ? m.common.useTemplate : t.href ? m.common.seeHowItWorks : m.common.verySoon}
         {(t.ready || t.href) && <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />}
       </span>
     </>

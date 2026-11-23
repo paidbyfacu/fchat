@@ -1,15 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-/* Colores, tipografía, radios y sombras: todo sale de tokens.css */
+/* Colors, typography, radii and shadows: everything comes from tokens.css */
 @import "./tokens.css";
 
-/* Los dark: de shadcn solo aplican con la clase .dark (todavía no hay tema oscuro).
-   Sin esta línea Tailwind los activa con el modo oscuro del sistema. */
+/* shadcn's dark: variants only apply with the .dark class, since there is no dark theme yet.
+   Without this line Tailwind turns them on with the system dark mode. */
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Inter servida por next/font (ver layout.tsx) */
+  /* Inter served by next/font, see layout.tsx */
   --tk-font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -38,8 +38,8 @@
   }
 }
 
-/* Fondo animado: manchas de color muy suaves que se mueven lento detrás del contenido.
-   Va dentro de un contenedor con isolate; con movimiento reducido quedan quietas. */
+/* Animated background: very soft color blobs that move slowly behind the content.
+   It goes inside a container with isolate; with reduced motion they stay still. */
 @layer components {
   .fc-aurora {
     position: absolute;
@@ -86,7 +86,7 @@
     opacity: 0.85;
   }
 
-  /* Texto con un degradé de marca que se desplaza despacio. */
+  /* Text with a brand gradient that shifts slowly. */
   .fc-gradient-text {
     background: linear-gradient(90deg, #b85a38, #a3401c, #9b3a6b, #b85a38);
     background-size: 300% 100%;
@@ -96,7 +96,7 @@
     animation: fc-pan 10s linear infinite;
   }
 
-  /* Borde con degradé para destacar una tarjeta, como la plantilla más usada. */
+  /* Gradient border to highlight a card, such as the most used template. */
   .fc-glow {
     position: relative;
     isolation: isolate;
@@ -112,7 +112,7 @@
     animation: fc-pan 8s linear infinite;
   }
 
-  /* Flota despacio, para ilustraciones de estados vacíos. */
+  /* Floats slowly, for empty state illustrations. */
   .fc-float {
     animation: fc-float 6s ease-in-out infinite;
   }

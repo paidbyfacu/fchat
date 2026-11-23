@@ -1,12 +1,16 @@
-import { TERMS, TERMS_DATE } from "@/lib/terms"
+import type { Locale } from "@/lib/i18n/locale"
+import { TERMS } from "@/lib/terms"
 import { cn } from "@/lib/utils"
 
-/** Texto completo de los términos, numerado. */
-export function TermsBody({ className }: { className?: string }) {
+/** Full text of the terms, numbered, in the page language. */
+export function TermsBody({ locale, className }: { locale: Locale; className?: string }) {
+  const terms = TERMS[locale]
   return (
     <div className={cn("grid gap-5", className)}>
-      <p className="text-xs text-muted-foreground">Última actualización: {TERMS_DATE}</p>
-      {TERMS.map((s, i) => (
+      <p className="text-xs text-muted-foreground">
+        {terms.updated} {terms.date}
+      </p>
+      {terms.sections.map((s, i) => (
         <section key={s.title} className="grid gap-1.5">
           <h2 className="text-sm font-semibold">
             {i + 1}. {s.title}
@@ -21,10 +25,3 @@ export function TermsBody({ className }: { className?: string }) {
     </div>
   )
 }
-
-/** Lo más importante, en tres líneas, para leer antes de aceptar. */
-export const TERMS_HIGHLIGHTS = [
-  "Es gratis y de código abierto, pero no puedes venderlo ni cobrar por él.",
-  "Tu instalación, tus cuentas y lo que envías quedan bajo tu responsabilidad.",
-  "FChat no responde por baneos, bloqueos ni por el mal uso de la plataforma.",
-]

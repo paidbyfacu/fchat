@@ -1,8 +1,8 @@
-// Acceso a Postgres. Una sola interfaz para dos motores:
-//   - DATABASE_URL definida  → Postgres real, como Neon en Vercel, con node-postgres
-//   - PGLITE_DIR=<carpeta>   → PGlite embebido (desarrollo; en .env.local, fuera de web/)
-//   - PGLITE_DIR=memory://   → PGlite en memoria (tests)
-// Todo el código usa query() y tx(); nunca el driver directo.
+// Postgres access. One interface for two engines:
+//   - DATABASE_URL set       → real Postgres, such as Neon on Vercel, with node-postgres
+//   - PGLITE_DIR=<folder>    → embedded PGlite for development, in .env.local, outside web/
+//   - PGLITE_DIR=memory://   → in-memory PGlite for tests
+// All code uses query() and tx(); never the driver directly.
 
 import { mkdirSync, readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
@@ -11,7 +11,7 @@ export type Row = Record<string, unknown>
 
 export interface Db {
   query<T extends Row = Row>(sql: string, params?: unknown[]): Promise<T[]>
-  /** Ejecuta varias sentencias sin parámetros (migraciones). */
+  /** Runs several statements without parameters, for migrations. */
   exec(sql: string): Promise<void>
   tx<T>(fn: (q: Db) => Promise<T>): Promise<T>
 }
@@ -39,10 +39,10 @@ async function openPglite(dir: string): Promise<Db> {
   const exec = async (sql: string) => {
     await pg.exec(sql)
   }
-  // PGlite es una sola conexión: las transacciones se serializan solas.
+  // PGlite is a single connection: transactions are serialized on their own.
   const tx: Db["tx"] = (fn) =>
     pg.transaction((t) => {
-      const nested: Db["tx"] = () => Promise.reject(new Error("tx anidada"))
+      const nested: Db["tx"] = () => Promise.reject(new Error("nested tx"))
       const texec = async (s: string) => {
         await t.exec(s)
       }
@@ -52,10 +52,10 @@ async function openPglite(dir: string): Promise<Db> {
 }
 
 /**
- * Neon entrega la dirección con sslmode=require. node-postgres ya la trata como
- * verify-full, pero lo avisa con un «SECURITY WARNING» en cada arranque, que en los
- * Logs de Vercel sale en rojo como si fuera un error. Pedir verify-full es lo mismo
- * que hace hoy y no deja ese aviso.
+ * Neon hands out the address with sslmode=require. node-postgres already treats it as
+ * verify-full, but warns about it with a "SECURITY WARNING" on every start, which shows
+ * up in red in the Vercel Logs as if it were an error. Asking for verify-full does the
+ * same thing it does today and leaves no warning.
  */
 export function pgConnectionString(url: string): string {
   try {
@@ -66,7 +66,7 @@ export function pgConnectionString(url: string): string {
       return u.toString()
     }
   } catch {
-    // no es una URL: se usa tal cual
+    // not a URL: used as is
   }
   return url
 }
@@ -82,7 +82,7 @@ async function openPostgres(url: string): Promise<Db> {
     try {
       await client.query("begin")
       const res = await fn(
-        wrap(client, () => Promise.reject(new Error("tx anidada")), async (s) => {
+        wrap(client, () => Promise.reject(new Error("nested tx")), async (s) => {
           await client.query(s)
         }),
       )
@@ -100,11 +100,11 @@ async function openPostgres(url: string): Promise<Db> {
 
 const MIGRATIONS_DIR = path.join(process.cwd(), "db", "migrations")
 
-// Candado de las migraciones. En la primera visita a una instalación nueva de Vercel
-// arrancan varias funciones a la vez y todas quieren migrar la base vacía: sin esto,
-// la segunda repetía la migración que la primera ya había aplicado, fallaba con
-// «column ... already exists» y la página daba «Internal Server Error». Con el candado,
-// la segunda espera a la primera y después saltea lo que ya quedó aplicado.
+// Migration lock. On the first visit to a new Vercel installation several functions
+// start at once and all of them want to migrate the empty database: without this,
+// the second one repeated the migration the first had already applied, failed with
+// "column ... already exists" and the page showed "Internal Server Error". With the lock,
+// the second waits for the first and then skips whatever was already applied.
 const MIGRATIONS_LOCK = 7_316_204_118
 
 export async function migrate(db: Db, dir = MIGRATIONS_DIR): Promise<string[]> {
@@ -119,7 +119,7 @@ export async function migrate(db: Db, dir = MIGRATIONS_DIR): Promise<string[]> {
     const sql = readFileSync(path.join(/*turbopackIgnore: true*/ dir, file), "utf8")
     const ran = await db.tx(async (q) => {
       await q.query("select pg_advisory_xact_lock($1)", [MIGRATIONS_LOCK])
-      // otra función pudo aplicarla mientras esta esperaba el candado
+      // another function may have applied it while this one waited for the lock
       if ((await q.query("select 1 from _migrations where name = $1", [file])).length) return false
       await q.exec(sql)
       await q.query("insert into _migrations (name) values ($1)", [file])
@@ -132,20 +132,20 @@ export async function migrate(db: Db, dir = MIGRATIONS_DIR): Promise<string[]> {
 
 export async function openDb(opts: { url?: string; pgliteDir?: string } = {}): Promise<Db> {
   const url = opts.url ?? process.env.DATABASE_URL
-  // La carpeta de PGlite sale SOLO de la variable de entorno. Si el código tiene
-  // la ruta escrita (path.join(process.cwd(), ...)), Turbopack la toma como parte
-  // del proyecto, la vigila, y cada escritura de PGlite recarga la página en bucle.
+  // The PGlite folder comes ONLY from the environment variable. If the code has the
+  // path written in it, like path.join(process.cwd(), ...), Turbopack treats it as part
+  // of the project, watches it, and every PGlite write reloads the page in a loop.
   const dir = opts.pgliteDir ?? process.env.PGLITE_DIR
-  if (!url && !dir) throw new Error("Define DATABASE_URL (Postgres) o PGLITE_DIR (desarrollo)")
+  if (!url && !dir) throw new Error("Set DATABASE_URL for Postgres or PGLITE_DIR for development")
   const db = url ? await openPostgres(url) : await openPglite(dir!)
   await migrate(db)
   return db
 }
 
-// Una sola instancia por proceso (el servidor de desarrollo recarga módulos).
-// Si abrirla falla, como una base de Neon que tarda en despertar o dos funciones que
-// migran a la vez en la primera instalación, no se guarda el error: el próximo pedido
-// lo vuelve a intentar en vez de fallar hasta que Vercel recicle la función.
+// One instance per process, since the dev server reloads modules.
+// If opening it fails, like a Neon database that is slow to wake up or two functions
+// migrating at once on the first installation, the error is not kept: the next request
+// tries again instead of failing until Vercel recycles the function.
 const g = globalThis as unknown as { __db?: Promise<Db> }
 export function getDb(): Promise<Db> {
   g.__db ??= openDb().catch((e) => {

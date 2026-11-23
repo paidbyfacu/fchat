@@ -1,9 +1,9 @@
 import { startTransition, type FormEvent } from "react"
 
 /**
- * Envía un formulario a la acción de useActionState sin que React lo vacíe al
- * terminar. Con `action={...}` React borra los campos después de cada envío, y si
- * la acción devolvió un error la persona tenía que volver a escribir todo.
+ * Submits a form to a useActionState action without React clearing it afterwards.
+ * With `action={...}` React resets the fields after every submit, and if the action
+ * returned an error the person had to type everything again.
  */
 export function keepValues(action: (form: FormData) => void) {
   return (e: FormEvent<HTMLFormElement>) => {

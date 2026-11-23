@@ -104,7 +104,7 @@ You do not need to install anything on your computer or write any code. Everythi
 
 About 30 minutes in total, and you only do it once. Meta, Vercel and GitHub change their dashboards often: if a button has a different name or is somewhere else, look for the closest one.
 
-The dashboard is in Spanish today. Its labels are written here in English followed by the current Spanish label in italics, for example **Inbox** / *Bandeja*.
+The dashboard is available in English and Spanish: it follows your browser language, and you can change it in **Settings**. The FChat screenshots in this guide show the Spanish interface.
 
 ### Step 1. Prepare your Instagram
 
@@ -198,7 +198,7 @@ You do not need to set environment variables: secrets are generated the first ti
 
 Your FChat has a single main address: the one under **Domains**. It is the one you use to open the dashboard and the one that goes into Meta.
 
-- **Use FChat's Copy buttons.** In **Connect your accounts** / *Vincula tus redes*, every address Meta asks for is already built with your main address. Copy it with its button instead of typing it.
+- **Use FChat's Copy buttons.** In **Connect your accounts**, every address Meta asks for is already built with your main address. Copy it with its button instead of typing it.
 - **The webhook is your main address with `/webhook` at the end:** `https://your-fchat.vercel.app/webhook`. With `https://` at the start, no extra slash at the end and no spaces.
 - **Do not use the long address.** Under **Deployment**, Vercel shows another, longer address with random letters and your team name, like `fchat-xxxxxxxxx-your-team.vercel.app`. Vercel creates a new one for every deploy and protects it: anyone who opens it without being logged in to your Vercel account sees **Log in to Vercel**. Meta cannot get in either, so the webhook does not work with that address.
 
@@ -212,13 +212,13 @@ Open your FChat with **Visit** **as soon as the deploy finishes**. The setup scr
 
 1. Type your name, your email and a password of 12 characters or more.
 2. Read and accept the [terms of use](TERMS.md).
-3. Click **Create my account** / *Crear mi cuenta*.
+3. Click **Create my account**.
 
 That account is the only one that can log in to the dashboard. Once it exists, the setup screen no longer appears.
 
 ### Step 4. Connect Instagram with Meta
 
-After you create the account, FChat takes you to **Connect your accounts** / *Vincula tus redes*: a 7-step guide inside the dashboard, with a button to copy every value Meta asks for. Each step is checked off on its own when FChat detects you did it.
+After you create the account, FChat takes you to **Connect your accounts**: a 7-step guide inside the dashboard, with a button to copy every value Meta asks for. Each step is checked off on its own when FChat detects you did it.
 
 ![Connect your accounts: the 7-step guide inside FChat](docs/img/fchat-02-vincula-tus-redes.webp)
 
@@ -234,7 +234,7 @@ After you create the account, FChat takes you to **Connect your accounts** / *Vi
 
 ![API setup with Instagram login, in the Meta dashboard](docs/img/meta-07-datos-de-la-app.webp)
 
-When you finish, FChat confirms that Instagram is connected and your account shows as **Connected** / *Conectada*:
+When you finish, FChat confirms that Instagram is connected and your account shows as **Connected**:
 
 ![Instagram connected in FChat](docs/img/fchat-10-instagram-conectado.webp)
 
@@ -242,7 +242,7 @@ When you finish, FChat confirms that Instagram is connected and your account sho
 
 FChat updates itself with a GitHub Actions workflow: a task GitHub runs on its own in your repository. The Vercel button does not copy the repository's `.github` folder, which is why you do this once from the dashboard.
 
-1. In FChat: **Settings** › **Updates** / *Ajustes* › *Actualizaciones*. You see a prompt to turn on automatic updates with the **Enable on GitHub** / *Activar en GitHub* button.
+1. In FChat: **Settings** › **Updates**. You see a prompt to turn on automatic updates with the **Enable on GitHub** button.
 
    ![Settings › Updates with the Enable on GitHub button](docs/img/fchat-21-actualizaciones.webp)
 
@@ -255,7 +255,7 @@ FChat updates itself with a GitHub Actions workflow: a task GitHub runs on its o
 
    <img src="docs/img/github-02-commit.webp" alt="GitHub Commit changes window with Commit directly to the main branch" width="420">
 
-5. Vercel redeploys on its own. In a few minutes, **Settings** › **Updates** says **Active** / *Activas*.
+5. Vercel redeploys on its own. In a few minutes, **Settings** › **Updates** says **Active**.
 
    ![Automatic updates turned on](docs/img/fchat-22-actualizaciones-activas.webp)
 
@@ -263,7 +263,7 @@ From then on, every 4 hours GitHub checks whether there is a new version of FCha
 
 #### Update right away
 
-In **Settings** › **Updates**, click **Update now** / *Actualizar ahora*. The **Actions** tab of your repository opens on the FChat workflow, called **Update FChat**.
+In **Settings** › **Updates**, click **Update now**. The **Actions** tab of your repository opens on the FChat workflow, called **Update FChat**.
 
 1. Click **Run workflow**.
 2. In the window that opens, keep **main** under "Use workflow from" and click **Run workflow** again.
@@ -292,7 +292,7 @@ GitHub Actions is free in public repositories. In private ones, each run uses mi
 
 ### Step 6. Create your first automation
 
-1. In FChat: **Automations** › **Templates** / *Automatizaciones* › *Plantillas*. Pick **Auto-DM links from comments**, or **Get followers before sending the link** if you want people to follow you before they get it.
+1. In FChat: **Automations** › **Templates**. Pick **Auto-DM links from comments**, or **Get followers before sending the link** if you want people to follow you before they get it.
 
    ![Automation templates](docs/img/fchat-11-plantillas.webp)
 
@@ -302,25 +302,25 @@ GitHub Actions is free in public repositories. In private ones, each run uses mi
    - **And the comment contains:** the keywords that trigger it, for example `LINK`. Type each one and press Enter. You can also add words that stop it.
    - **Also reply under the comment:** the public replies, for example "Sent you a DM!". One is picked at random each time.
    - **First DM:** the private message with its button, for example "Continue". The button is required: without a tap, Instagram does not let the conversation go on.
-   - **Ask to follow:** the message for people who do not follow you and how many times to ask. With **Until they follow** / *Hasta que me siga*, only followers get the link.
+   - **Ask to follow:** the message for people who do not follow you and how many times to ask. With **Until they follow**, only followers get the link.
    - **DM with the link:** the final message, with the button text and your link.
 
    <img src="docs/img/fchat-13-elegir-post.webp" alt="Window to choose the automation's posts" width="640">
 
    <img src="docs/img/fchat-12-asistente.webp" alt="Full automation wizard with the phone preview" width="720">
 
-3. Click **Publish** / *Publicar*. A notice confirms that the automation is active and already answering comments.
+3. Click **Publish**. A notice confirms that the automation is active and already answering comments.
 
    ![Active automation](docs/img/fchat-14-automatizacion-activa.webp)
 
-To finish it later, click **Save draft** / *Guardar borrador*.
+To finish it later, click **Save draft**.
 
 ### Step 7. Test it
 
 1. From your **second** Instagram account, comment the keyword on the post you chose, for example `link`. Comments from your own account do not trigger anything.
 2. The second account gets the message with the button. Tap it.
-3. If you chose to ask for a follow and that account does not follow you, it gets the request with the **Following** / *Siguiendo* button. Follow and tap it.
-4. The link arrives. The conversation shows up in the FChat **Inbox** / *Bandeja* and the numbers in the automation.
+3. If you chose to ask for a follow and that account does not follow you, it gets the request with the **Following** button. Follow and tap it.
+4. The link arrives. The conversation shows up in the FChat **Inbox** and the numbers in the automation.
 
 If nothing arrives, see [Troubleshooting](#troubleshooting).
 
@@ -334,7 +334,7 @@ The first thing you see when you log in: templates to get started, the next step
 
 ### Automations and stats
 
-**Automations** / *Automatizaciones* lists all of yours, active and drafts. Open one to see how many people went through each step in the last 7 days and the messages it sends. From there you edit, pause or delete it.
+**Automations** lists all of yours, active and drafts. Open one to see how many people went through each step in the last 7 days and the messages it sends. From there you edit, pause or delete it.
 
 ![Automation list](docs/img/fchat-15-automatizaciones.webp)
 

@@ -101,7 +101,7 @@ function postbackPayload(m: IgMessage, index = 0): string {
   return b.payload
 }
 
-describe("motor", () => {
+describe("engine", () => {
   let db: Db
   let follows: boolean
   let ig: ReturnType<typeof fakeInstagram>
@@ -119,7 +119,7 @@ describe("motor", () => {
     await processPending(deps)
   }
 
-  it("comentario con la palabra → respuesta privada con botón", async () => {
+  it("comment with the keyword → private reply with a button", async () => {
     await setup(db)
     await hook(commentHook("c1", "Quiero el LINK!"))
     expect(ig.sent).toHaveLength(1)
@@ -131,7 +131,7 @@ describe("motor", () => {
     expect(run).toMatchObject({ status: "waiting", current_node: "open", waiting_for: "button" })
   })
 
-  it("respuesta pública: contesta bajo el comentario con una de las variantes, una sola vez", async () => {
+  it("public reply: answers under the comment with one of the variants, only once", async () => {
     const variantes = ["¡Te escribí por privado!", "Revisa tus mensajes", "Te mandé todo por DM"]
     await setup(db, { publicReplies: variantes })
     await hook(commentHook("c1", "link"))
@@ -143,13 +143,13 @@ describe("motor", () => {
     expect(ce).toMatchObject({ public_reply_id: "r1" })
   })
 
-  it("sin variantes cargadas no responde en público", async () => {
+  it("with no variants it does not reply publicly", async () => {
     await setup(db)
     await hook(commentHook("c1", "link"))
     expect(ig.replies).toHaveLength(0)
   })
 
-  it("el mismo webhook dos veces → un solo DM", async () => {
+  it("the same webhook twice → a single DM", async () => {
     await setup(db)
     await hook(commentHook("c1", "link"))
     await hook(commentHook("c1", "link"))
@@ -158,7 +158,7 @@ describe("motor", () => {
     expect(n).toBe(1)
   })
 
-  it("toca el botón y te sigue → recibe el link y termina", async () => {
+  it("taps the button and follows → gets the link and finishes", async () => {
     await setup(db)
     await hook(commentHook("c1", "link"))
     await hook(tapHook("u1", postbackPayload(ig.sent[0].message), "t1"))
@@ -174,13 +174,13 @@ describe("motor", () => {
     expect(steps).toEqual(["triggered", "dm_sent", "opened", "followed", "link_sent"])
   })
 
-  it("no te sigue → pide follow; «Ya te sigo» re-chequea; al tercer intento manda el link igual", async () => {
+  it("does not follow → asks to follow; Following checks again; on the third try sends the link anyway", async () => {
     await setup(db)
     follows = false
     await hook(commentHook("c1", "link"))
     await hook(tapHook("u1", postbackPayload(ig.sent[0].message), "t1"))
     expect(textOf(ig.sent[1].message)).toBe("Seguime primero")
-    // el botón de perfil apunta a la cuenta
+    // the profile button points to the account
     const ask = ig.sent[1].message
     expect("attachment" in ask && ask.attachment.payload.buttons[0]).toMatchObject({ type: "web_url", url: "https://www.instagram.com/micuenta" })
     await hook(tapHook("u1", postbackPayload(ig.sent[1].message), "t2"))
@@ -197,7 +197,7 @@ describe("motor", () => {
     expect(run.status).toBe("done")
   })
 
-  it("«hasta que me siga»: sin seguir nunca recibe el link; cuando sigue, sí", async () => {
+  it("until they follow: without following they never get the link; once they follow, they do", async () => {
     await setup(db, { maxFollowAsks: 0 })
     follows = false
     await hook(commentHook("c1", "link"))
@@ -214,7 +214,7 @@ describe("motor", () => {
     expect(run.status).toBe("done")
   })
 
-  it("límite de Meta al enviar → reintenta más tarde y no pierde a la persona", async () => {
+  it("Meta limit when sending → retries later and does not lose the person", async () => {
     await setup(db)
     let clock = new Date()
     deps.now = () => clock
@@ -225,7 +225,7 @@ describe("motor", () => {
     expect(r1).toMatchObject({ status: "waiting", waiting_for: "time", attempts: 1 })
     const [ce1] = await db.query(`select status from comment_events`)
     expect(ce1.status).toBe("matched")
-    // antes de hora no hace nada
+    // before the time, it does nothing
     expect(await resumeDueRuns(deps)).toBe(0)
     clock = new Date(clock.getTime() + 2 * 60_000)
     expect(await resumeDueRuns(deps)).toBe(1)
@@ -235,12 +235,12 @@ describe("motor", () => {
     expect(r2).toMatchObject({ status: "waiting", current_node: "open", waiting_for: "button", attempts: 0 })
     const [ce2] = await db.query(`select status, public_reply_id from comment_events`)
     expect(ce2).toMatchObject({ status: "replied" })
-    // y el resto del flujo sigue normal
+    // and the rest of the flow continues normally
     await hook(tapHook("u1", postbackPayload(ig.sent[0].message), "t1"))
     expect(textOf(ig.sent[1].message)).toBe("Acá está")
   })
 
-  it("error que no se arregla esperando → el run falla sin reintentar", async () => {
+  it("an error that waiting will not fix → the run fails without retrying", async () => {
     await setup(db)
     ig.failures.push(new IgError("Invalid OAuth access token", 400, 190))
     await hook(commentHook("c1", "link"))
@@ -250,7 +250,7 @@ describe("motor", () => {
     expect(acc.status).toBe("expired")
   })
 
-  it("multipost: la palabra funciona en cualquiera de los posts elegidos y en ningún otro", async () => {
+  it("multipost: the keyword works on any of the chosen posts and no others", async () => {
     await setup(db)
     await db.query(`update triggers set post_scope = 'specific', media_ids = '{reelA,reelB}'`)
     await hook(commentHook("c1", "link", "u1", "reelB"))
@@ -259,7 +259,7 @@ describe("motor", () => {
     expect(ig.sent.map((s) => s.recipient)).toEqual([{ comment_id: "c1" }, { comment_id: "c2" }])
   })
 
-  it("cualquier post: la misma persona recibe un DM por cada post distinto donde comenta", async () => {
+  it("any post: the same person gets a DM for each different post they comment on", async () => {
     await setup(db)
     await hook(commentHook("c1", "link", "u1", "post1"))
     await hook(commentHook("c2", "Link", "u1", "post2"))
@@ -267,7 +267,7 @@ describe("motor", () => {
     expect(ig.sent.map((s) => s.recipient)).toEqual([{ comment_id: "c1" }, { comment_id: "c2" }])
   })
 
-  it("si empieza a seguir en el segundo intento, recibe el link", async () => {
+  it("if they start following on the second try, they get the link", async () => {
     await setup(db)
     follows = false
     await hook(commentHook("c1", "link"))
@@ -277,7 +277,7 @@ describe("motor", () => {
     expect(ig.sent.map((s) => textOf(s.message))).toEqual(["¿Te paso el link?", "Seguime primero", "Acá está"])
   })
 
-  it("ignora comentarios propios, sin la palabra o con una palabra que frena", async () => {
+  it("ignores own comments, comments without the keyword or with a blocking word", async () => {
     await setup(db)
     await hook(commentHook("c1", "link", IG_ID))
     await hook(commentHook("c2", "me encantó"))
@@ -286,7 +286,7 @@ describe("motor", () => {
     expect(ig.sent).toHaveLength(0)
   })
 
-  it("la misma persona comenta dos veces el mismo post → un solo DM", async () => {
+  it("the same person comments twice on the same post → a single DM", async () => {
     await setup(db)
     await hook(commentHook("c1", "link"))
     await hook(commentHook("c2", "link otra vez"))
@@ -295,24 +295,24 @@ describe("motor", () => {
     expect(statuses).toEqual(["replied", "ignored"])
   })
 
-  it("un toque de otra persona o repetido no avanza el run", async () => {
+  it("a tap from someone else or a repeated tap does not advance the run", async () => {
     await setup(db)
     await hook(commentHook("c1", "link"))
     const payload = postbackPayload(ig.sent[0].message)
     await hook(tapHook("otra", payload, "t1"))
     expect(ig.sent).toHaveLength(1)
     await hook(tapHook("u1", payload, "t2"))
-    await hook(tapHook("u1", payload, "t3")) // repetido: el run ya avanzó
+    await hook(tapHook("u1", payload, "t3")) // repeated: the run already moved on
     expect(ig.sent).toHaveLength(2)
   })
 
-  it("automatización en borrador → no responde", async () => {
+  it("draft automation → does not reply", async () => {
     await setup(db, { status: "draft" })
     await hook(commentHook("c1", "link"))
     expect(ig.sent).toHaveLength(0)
   })
 
-  it("ventana de 24 h cerrada → no envía y el run vence", async () => {
+  it("24 h window closed → does not send and the run expires", async () => {
     await setup(db)
     follows = false
     await hook(commentHook("c1", "link"))
@@ -323,7 +323,7 @@ describe("motor", () => {
     expect(run.status).toBe("expired")
   })
 
-  it("payload con formato inesperado no rompe nada", async () => {
+  it("a payload with an unexpected shape breaks nothing", async () => {
     await setup(db)
     await hook(tapHook("u1", "cualquier-cosa", "t1"))
     await hook(tapHook("u1", payloadFor("00000000-0000-0000-0000-000000000000", "yes"), "t2"))
@@ -333,8 +333,8 @@ describe("motor", () => {
   })
 })
 
-describe("firma de Meta", () => {
-  it("acepta la firma correcta y rechaza el resto", () => {
+describe("Meta signature", () => {
+  it("accepts the right signature and rejects the rest", () => {
     const body = '{"object":"instagram"}'
     const sig = "sha256=" + createHmac("sha256", "secreto").update(body).digest("hex")
     expect(verifyMetaSignature(body, sig, "secreto")).toBe(true)
@@ -344,8 +344,8 @@ describe("firma de Meta", () => {
   })
 })
 
-describe("palabras clave", () => {
-  it("normaliza mayúsculas, acentos y puntuación, y busca palabra completa", () => {
+describe("keywords", () => {
+  it("normalizes case, accents and punctuation, and matches whole words", () => {
     expect(matchesKeyword("Pasame el LINK!!", "link")).toBe(true)
     expect(matchesKeyword("quiero info 🙏", "INFO")).toBe(true)
     expect(matchesKeyword("Guía", "guia")).toBe(true)

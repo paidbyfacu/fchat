@@ -1,5 +1,5 @@
-// Cifrado de tokens (AES-256-GCM), contraseñas (scrypt), firmas (HMAC) y la
-// firma de los webhooks de Meta. Solo node:crypto, sin dependencias.
+// Token encryption (AES-256-GCM), passwords (scrypt), signatures (HMAC) and the
+// Meta webhook signature. Only node:crypto, no dependencies.
 
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto"
 import { promisify } from "node:util"
@@ -8,7 +8,7 @@ const scryptAsync = promisify(scrypt) as (pw: string, salt: Buffer, len: number)
 
 function key32(b64: string): Buffer {
   const k = Buffer.from(b64, "base64")
-  if (k.length !== 32) throw new Error("TOKEN_ENC_KEY tiene que ser 32 bytes en base64")
+  if (k.length !== 32) throw new Error("TOKEN_ENC_KEY must be 32 bytes in base64")
   return k
 }
 
@@ -41,7 +41,7 @@ export async function verifyPassword(pw: string, stored: string): Promise<boolea
   return timingSafeEqual(got, expected)
 }
 
-/** Compara dos secretos sin que el tiempo de respuesta delate cuántos caracteres coinciden. */
+/** Compares two secrets without the response time revealing how many characters match. */
 export function safeEqual(a: string | null | undefined, b: string | null | undefined): boolean {
   if (typeof a !== "string" || typeof b !== "string" || !b) return false
   const ha = createHmac("sha256", "cmp").update(a).digest()
@@ -51,7 +51,7 @@ export function safeEqual(a: string | null | undefined, b: string | null | undef
 
 const b64url = (b: Buffer) => b.toString("base64url")
 
-/** Token firmado: base64url(json).base64url(hmac). Sirve para la sesión y el state de OAuth. */
+/** Signed token: base64url(json).base64url(hmac). Used for the session and the OAuth state. */
 export function sign(payload: object, secret: string): string {
   const body = b64url(Buffer.from(JSON.stringify(payload)))
   const mac = b64url(createHmac("sha256", secret).update(body).digest())
@@ -73,7 +73,7 @@ export function verify<T extends { exp: number }>(token: string | undefined, sec
   }
 }
 
-/** X-Hub-Signature-256 de Meta, calculada sobre el body crudo con la clave secreta de Instagram. */
+/** Meta's X-Hub-Signature-256, computed over the raw body with the Instagram app secret. */
 export function verifyMetaSignature(rawBody: string, header: string | null, appSecret: string): boolean {
   if (!header?.startsWith("sha256=")) return false
   const expected = createHmac("sha256", appSecret).update(rawBody, "utf8").digest()

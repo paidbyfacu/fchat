@@ -1,4 +1,4 @@
-// Íconos simples de los canales: lucide no trae logos de marcas.
+// Simple channel icons: lucide does not ship brand logos.
 
 export function InstagramGlyph({ className }: { className?: string }) {
   return (
@@ -19,7 +19,7 @@ export function TikTokGlyph({ className }: { className?: string }) {
   )
 }
 
-/** Cuadradito con el ícono del canal y su color, como en las tarjetas de ManyChat. */
+/** Small square with the channel icon and its color, for the channel cards. */
 export function ChannelBadge({ channel, className }: { channel: "instagram" | "tiktok"; className?: string }) {
   const Icon = channel === "instagram" ? InstagramGlyph : TikTokGlyph
   return (

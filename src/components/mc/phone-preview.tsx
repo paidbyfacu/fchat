@@ -4,12 +4,14 @@ import { useState } from "react"
 import { ExternalLinkIcon, HeartIcon, UserIcon } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Message } from "@/lib/message"
+import { fmt } from "@/lib/i18n/locale"
+import { useT } from "@/components/i18n"
 
 type View = "post" | "comments" | "dm"
 
 /**
- * Vista previa dibujada (no es una captura de Instagram). Se actualiza al
- * escribir. El dibujo es aria-hidden; el resumen en texto lo lee el lector.
+ * Drawn preview, not an Instagram screenshot. It updates while typing.
+ * The drawing is aria-hidden; screen readers read the text summary.
  */
 export function PhonePreview({
   username,
@@ -21,12 +23,14 @@ export function PhonePreview({
   messages: Message[]
 }) {
   const [view, setView] = useState<View>("dm")
+  const { t: all } = useT()
+  const t = all.ui
   const summary =
     view === "dm"
-      ? `Vista previa del DM: ${messages.map((m) => m.text).join(" / ") || "sin mensajes"}`
+      ? fmt(t.previewDm, { text: messages.map((m) => m.text).join(" / ") || t.noMessages })
       : view === "comments"
-        ? `Vista previa del comentario: «${comment}»`
-        : "Vista previa del post"
+        ? fmt(t.previewComment, { comment })
+        : t.previewPost
 
   return (
     <div className="grid justify-items-center gap-4">
@@ -47,7 +51,7 @@ export function PhonePreview({
 
         {view === "post" && (
           <div className="grid flex-1 place-items-center bg-gradient-to-br from-bubble-in to-phone text-xs text-on-phone-muted">
-            Tu post o reel
+            {t.yourPost}
           </div>
         )}
 
@@ -57,10 +61,10 @@ export function PhonePreview({
               <div className="size-7 shrink-0 rounded-full bg-bubble-in" />
               <div className="flex-1">
                 <p>
-                  <span className="font-semibold">alguien</span> <span className="text-on-phone-muted">ahora</span>
+                  <span className="font-semibold">{t.someone}</span> <span className="text-on-phone-muted">{t.now}</span>
                 </p>
                 <p>{comment}</p>
-                <p className="mt-1 text-on-phone-muted">Responder</p>
+                <p className="mt-1 text-on-phone-muted">{t.reply}</p>
               </div>
               <HeartIcon className="size-3.5 text-on-phone-muted" />
             </div>
@@ -69,9 +73,9 @@ export function PhonePreview({
 
         {view === "dm" && (
           <div className="flex flex-1 flex-col justify-end gap-2 overflow-hidden p-3 text-[13px] leading-snug">
-            {messages.length === 0 && <p className="m-auto text-xs text-on-phone-muted">Escribe tu primer mensaje</p>}
+            {messages.length === 0 && <p className="m-auto text-xs text-on-phone-muted">{t.writeFirst}</p>}
             {messages.map((m, i) => {
-              // el toque de la persona: el primer botón de respuesta, si hay un mensaje después
+              // the person's tap: the first reply button, if a message follows
               const tap = i < messages.length - 1 ? m.buttons.find((b) => b.type === "postback") : undefined
               return (
                 <div key={i} className="contents">
@@ -84,7 +88,7 @@ export function PhonePreview({
                         key={b.id}
                         className="flex items-center justify-center gap-1 rounded-xl bg-bubble-in px-3 py-2 text-center font-semibold text-on-bubble"
                       >
-                        {b.title || "Botón"}
+                        {b.title || t.button}
                         {b.type === "url" && <ExternalLinkIcon className="size-3" />}
                       </div>
                     ))}
@@ -100,14 +104,14 @@ export function PhonePreview({
           </div>
         )}
 
-        <div className="m-3 rounded-pill border border-white/15 px-4 py-2 text-xs text-on-phone-muted">Mensaje…</div>
+        <div className="m-3 rounded-pill border border-white/15 px-4 py-2 text-xs text-on-phone-muted">{t.messagePlaceholder}</div>
       </div>
 
       <Tabs value={view} onValueChange={(v) => setView(v as View)}>
-        <TabsList aria-label="Qué ver en la vista previa">
-          <TabsTrigger value="post">Post</TabsTrigger>
-          <TabsTrigger value="comments">Comentarios</TabsTrigger>
-          <TabsTrigger value="dm">DM</TabsTrigger>
+        <TabsList aria-label={t.previewTabs}>
+          <TabsTrigger value="post">{t.tabPost}</TabsTrigger>
+          <TabsTrigger value="comments">{t.tabComments}</TabsTrigger>
+          <TabsTrigger value="dm">{t.tabDm}</TabsTrigger>
         </TabsList>
       </Tabs>
     </div>

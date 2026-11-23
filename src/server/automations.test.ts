@@ -74,7 +74,7 @@ function wizard(accountId: string, patch: Partial<Wizard> = {}): Wizard {
   }
 }
 
-describe("asistente → automatización", () => {
+describe("wizard → automation", () => {
   let db: Db
   let userId: string
   let accountId: string
@@ -100,20 +100,20 @@ describe("asistente → automatización", () => {
     await processPending(deps)
   }
 
-  it("sin «pedir que te sigan», el botón va directo al link", () => {
+  it("without ask to follow, the button goes straight to the link", () => {
     const { graph } = compileWizard(wizard("x", { askFollow: { ...defaultWizard("x").askFollow, on: false } }))
     expect(graph.nodes.map((n) => n.id)).toEqual(["open", "link"])
     const open = graph.nodes[0]
     expect(open.type === "send_message" && open.buttons?.[0]).toMatchObject({ type: "postback", next: "link" })
   })
 
-  it("normaliza y deduplica palabras y posts", () => {
+  it("normalizes and deduplicates keywords and posts", () => {
     const { trigger } = compileWizard(wizard("x", { include: ["Guía", "guia", " GUÍA!"], posts: [{ id: "p1" }, { id: "p1" }] }))
     expect(trigger.keywords_include).toEqual(["guia"])
     expect(trigger.media_ids).toEqual(["p1"])
   })
 
-  it("validación: no publica sin posts, con URL a medias o con respuestas de solo emojis", () => {
+  it("validation: does not publish without posts, with a half-written URL or with emoji-only replies", () => {
     const w = wizard("x", {
       posts: [],
       link: { text: "x", links: [{ title: "Abrir", url: "https://" }] },
@@ -123,7 +123,7 @@ describe("asistente → automatización", () => {
     expect(fields).toEqual(expect.arrayContaining(["posts", "link", "publicReplies"]))
   })
 
-  it("el borrador se guarda incompleto; publicar exige todo", async () => {
+  it("a draft is saved incomplete; publishing requires everything", async () => {
     const draft = await saveAutomation(db, userId, null, wizard(accountId, { posts: [] }), false)
     expect(draft.ok).toBe(true)
     const pub = await saveAutomation(db, userId, draft.ok ? draft.id : null, wizard(accountId, { posts: [] }), true)
@@ -132,7 +132,7 @@ describe("asistente → automatización", () => {
     expect(a).toMatchObject({ status: "draft", live_version_id: null })
   })
 
-  it("varios posts: responde en los elegidos y en ningún otro", async () => {
+  it("several posts: replies on the chosen ones and no others", async () => {
     const r = await saveAutomation(db, userId, null, wizard(accountId), true)
     expect(r.ok).toBe(true)
     await hook(comment("c1", "pasame la guía", "p2"))
@@ -141,7 +141,7 @@ describe("asistente → automatización", () => {
     expect(textOf(f.sent[0])).toBe(defaultWizard("x").opening.text)
   })
 
-  it("respuesta pública: una de las variantes, bajo el comentario", async () => {
+  it("public reply: one of the variants, under the comment", async () => {
     const w = wizard(accountId, { publicReplies: { on: true, texts: ["Te escribí 💌", "Revisá tus DMs"] } })
     await saveAutomation(db, userId, null, w, true)
     await hook(comment("c1", "guia", "p1"))
@@ -152,9 +152,9 @@ describe("asistente → automatización", () => {
     expect(ce.public_reply_id).toBe("r1")
   })
 
-  it("editar y republicar: versión nueva; un run en curso termina con la anterior", async () => {
+  it("edit and republish: a new version; a run in progress finishes with the previous one", async () => {
     const first = await saveAutomation(db, userId, null, wizard(accountId, { askFollow: { ...defaultWizard("x").askFollow, on: false } }), true)
-    if (!first.ok) throw new Error("no publicó")
+    if (!first.ok) throw new Error("did not publish")
     await hook(comment("c1", "guia", "p1"))
     await saveAutomation(
       db,
@@ -166,14 +166,14 @@ describe("asistente → automatización", () => {
     const versions = await db.query<{ version: number }>(`select version from automation_versions order by version`)
     expect(versions.map((v) => v.version)).toEqual([1, 2])
     await hook(tap("u1", payloadOf(f.sent[0]), "t1"))
-    expect(textOf(f.sent[1])).toBe("Acá está") // la versión 1
+    expect(textOf(f.sent[1])).toBe("Acá está") // version 1
     await hook(comment("c9", "guia", "p2", "u3"))
     await hook(tap("u3", payloadOf(f.sent[2]), "t2"))
-    // la persona nueva va por la versión 2 (con «pedir que te sigan», que sigue por defecto) y, como te sigue, recibe el link nuevo
+    // the new person goes through version 2, with ask to follow on by default, and since they follow, they get the new link
     expect(textOf(f.sent[f.sent.length - 1])).toBe("Texto nuevo")
   })
 
-  it("solo puede haber un «próximo post» esperando por cuenta", async () => {
+  it("only one next-post automation can wait per account", async () => {
     const a = await saveAutomation(db, userId, null, wizard(accountId, { scope: "next", posts: [] }), true)
     expect(a.ok).toBe(true)
     const b = await saveAutomation(db, userId, null, wizard(accountId, { name: "Otra", scope: "next", posts: [] }), true)
@@ -181,7 +181,7 @@ describe("asistente → automatización", () => {
     expect(!b.ok && b.issues[0].field).toBe("posts")
   })
 
-  it("«próximo post»: se asigna con el primer comentario en un post nuevo", async () => {
+  it("next post: assigned with the first comment on a new post", async () => {
     await saveAutomation(db, userId, null, wizard(accountId, { scope: "next", posts: [] }), true)
     await hook(comment("c1", "guia", "nuevo"))
     expect(f.sent).toHaveLength(1)
@@ -191,7 +191,7 @@ describe("asistente → automatización", () => {
     expect(f.sent).toHaveLength(1)
   })
 
-  it("avisa si otra automatización activa usa la misma palabra en los mismos posts", async () => {
+  it("warns if another active automation uses the same keyword on the same posts", async () => {
     await saveAutomation(db, userId, null, wizard(accountId, { name: "Primera" }), true)
     const r = await saveAutomation(db, userId, null, wizard(accountId, { name: "Segunda", posts: [{ id: "p2" }, { id: "p9" }] }), true)
     expect(r.ok && r.warnings[0]).toContain("Primera")
@@ -199,9 +199,9 @@ describe("asistente → automatización", () => {
     expect(r2.ok && r2.warnings).toEqual([])
   })
 
-  it("no deja tocar automatizaciones de otro usuario y borra las propias", async () => {
+  it("does not allow touching another user's automations and deletes your own", async () => {
     const r = await saveAutomation(db, userId, null, wizard(accountId), true)
-    if (!r.ok) throw new Error("no publicó")
+    if (!r.ok) throw new Error("did not publish")
     const [intruso] = await db.query<{ id: string }>(`insert into users (email, password_hash) values ('x@y.z', 'x') returning id`)
     expect(await deleteAutomation(db, intruso.id, r.id)).toBe(false)
     expect(await loadWizard(db, intruso.id, r.id)).toBeNull()
@@ -210,7 +210,7 @@ describe("asistente → automatización", () => {
     expect(n).toBe(0)
   })
 
-  it("abre en el asistente la automatización sembrada del hito 1", () => {
+  it("opens the automation seeded in milestone 1 in the wizard", () => {
     const g = commentToDmGraph({
       opening: "Hola",
       openingButton: "Sí",

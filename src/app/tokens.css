@@ -1,4 +1,4 @@
-/* Tokens de diseño de FChat: colores, tipografía, radios y sombras. El color de marca es --tk-brand y el de los botones, --tk-accent. */
+/* FChat design tokens: colors, typography, radii and shadows. The brand color is --tk-brand and the button color is --tk-accent. */
 
 :root {
   --tk-bg: #f6f7f9;

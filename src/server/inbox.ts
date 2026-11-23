@@ -1,6 +1,8 @@
-// Lecturas de la bandeja: lista de conversaciones y el historial de una.
-// Todo filtra por las cuentas del usuario logueado.
+// Inbox reads: the conversation list and the history of one.
+// Everything is filtered by the logged-in user's accounts.
 
+import { getMessages } from "@/lib/i18n"
+import { fmt, type Locale } from "@/lib/i18n/locale"
 import { getDb } from "./db"
 
 export type InboxFolder = "all" | "reminders" | "starred"
@@ -120,7 +122,7 @@ export type TimelineItem =
     }
   | { type: "comment"; id: string; at: Date; text: string; status: string; automation: string | null }
 
-/** Mensajes y comentarios de una persona, del más viejo al más nuevo. */
+/** Messages and comments of one person, oldest first. */
 export async function conversationTimeline(userId: string, contactId: string, limit = 200): Promise<TimelineItem[]> {
   const db = await getDb()
   const [messages, comments] = await Promise.all([
@@ -164,19 +166,20 @@ export async function conversationTimeline(userId: string, contactId: string, li
   return items.sort((a, b) => a.at.getTime() - b.at.getTime())
 }
 
-/** Texto corto de un mensaje para la lista de conversaciones. */
-export function messagePreview(kind: string | null, body: unknown, direction: "in" | "out" | null): string {
+/** Short text of a message for the conversation list. */
+export function messagePreview(kind: string | null, body: unknown, direction: "in" | "out" | null, locale: Locale = "es"): string {
   if (!kind) return ""
+  const t = getMessages(locale).inbox
   const b = (body ?? {}) as Record<string, unknown>
   const text = messageText(kind, b)
-  const mine = direction === "out" ? "Tú: " : ""
-  if (kind === "postback") return `Tocó «${String(b.title ?? "un botón")}»`
-  if (kind === "media") return direction === "out" ? "Tú: enviaste un archivo" : "Envió un archivo"
-  if (kind === "story_reply") return "Respondió a tu historia"
-  return text ? `${mine}${text}` : `${mine}mensaje`
+  const mine = direction === "out" ? t.previewYou : ""
+  if (kind === "postback") return fmt(t.previewTapped, { title: String(b.title ?? t.previewAButton) })
+  if (kind === "media") return direction === "out" ? t.previewYouFile : t.sentFile
+  if (kind === "story_reply") return t.storyReply
+  return text ? `${mine}${text}` : `${mine}${t.previewMessage}`
 }
 
-/** El texto visible de un mensaje guardado, sea texto simple, plantilla con botones o respuesta rápida. */
+/** The visible text of a stored message: plain text, a template with buttons or a quick reply. */
 export function messageText(kind: string, body: Record<string, unknown>): string {
   if (typeof body.text === "string") return body.text
   const att = body.attachment as { payload?: { text?: string } } | undefined

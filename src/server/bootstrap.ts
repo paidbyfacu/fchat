@@ -1,6 +1,6 @@
-// Arranque: usuario dueño desde el entorno si está, la cuenta de IG_ACCESS_TOKEN
-// si está y una automatización de ejemplo en borrador. Sin variables, el dueño se
-// crea desde la pantalla de instalación, en /setup.
+// Startup: the owner user from the environment if set, the IG_ACCESS_TOKEN account
+// if set and a sample draft automation. Without variables, the owner is created
+// from the installation screen, at /setup.
 
 import { createHash } from "node:crypto"
 import type { Db } from "./db"
@@ -9,11 +9,12 @@ import { env } from "./env"
 import { secrets } from "./config"
 import type { InstagramClient } from "./instagram"
 import { commentToDmGraph } from "./engine/graph"
+import { defaultWizard } from "@/lib/wizard"
 
-/** Largo mínimo de OWNER_PASSWORD en producción: el panel queda en internet. */
+/** Minimum OWNER_PASSWORD length in production: the dashboard is on the internet. */
 export const MIN_OWNER_PASSWORD = 12
 
-/** Si OWNER_EMAIL y OWNER_PASSWORD están en el entorno, la contraseña de ese usuario sale de ahí y se pisa en cada arranque. */
+/** If OWNER_EMAIL and OWNER_PASSWORD are in the environment, that user's password comes from there and is overwritten on every start. */
 export function passwordFromEnv(email: string): boolean {
   const e = env.ownerEmail()?.trim().toLowerCase()
   return !!(e && env.ownerPassword() && e === email.toLowerCase())
@@ -22,10 +23,10 @@ export function passwordFromEnv(email: string): boolean {
 export async function ensureOwner(db: Db) {
   const email = env.ownerEmail()
   const password = env.ownerPassword()
-  // sin variables: el dueño se crea desde /setup
+  // no variables: the owner is created from /setup
   if (!email || !password) return
   if (env.isProd && password.length < MIN_OWNER_PASSWORD) {
-    console.error(`[bootstrap] OWNER_PASSWORD tiene que tener al menos ${MIN_OWNER_PASSWORD} caracteres: no se aplicó`)
+    console.error(`[bootstrap] OWNER_PASSWORD must have at least ${MIN_OWNER_PASSWORD} characters: not applied`)
     return
   }
   const [u] = await db.query<{ id: string; password_hash: string }>(`select id, password_hash from users where email = $1`, [email])
@@ -33,18 +34,18 @@ export async function ensureOwner(db: Db) {
     await db.query(`insert into users (email, password_hash) values ($1, $2)`, [email, await hashPassword(password)])
     return
   }
-  // OWNER_PASSWORD manda: si cambió en el entorno, se actualiza al arrancar
+  // OWNER_PASSWORD wins: if it changed in the environment, it is updated on start
   if (!(await verifyPassword(password, u.password_hash))) {
     await db.query(`update users set password_hash = $2 where id = $1`, [u.id, await hashPassword(password)])
-    // contraseña nueva: se cierran todas las sesiones abiertas, por si alguien entró con la vieja
+    // new password: every open session is closed, in case someone logged in with the old one
     await db.query(`update sessions set revoked_at = now() where user_id = $1 and revoked_at is null`, [u.id])
   }
 }
 
 /**
- * Token de Instagram sin pasar por OAuth: IG_ACCESS_TOKEN del entorno. Se importa
- * solo cuando cambia: se guarda una huella del último importado, así un arranque
- * nuevo no pisa el token que la app ya renovó.
+ * Instagram token without OAuth: IG_ACCESS_TOKEN from the environment. It is imported
+ * only when it changes: a fingerprint of the last imported one is stored, so a new
+ * start does not overwrite the token the app already renewed.
  */
 export async function importAccountFromEnv(db: Db, ig: InstagramClient) {
   const token = env.igAccessToken()
@@ -57,19 +58,19 @@ export async function importAccountFromEnv(db: Db, ig: InstagramClient) {
     `select id, access_token_enc, status from ig_accounts order by created_at limit 1`,
   )
   const key = await secrets.tokenEncKey()
-  // ya importado, o es el mismo de la cuenta activa: nada que hacer, sin gastar una llamada a Meta
+  // already imported, or the same as the active account's: nothing to do, without spending a Meta call
   if (existing && (seen?.value === fingerprint || (existing.status === "ok" && decrypt(existing.access_token_enc, key) === token))) return
   const me = await ig.getMe(token)
   await ig
     .subscribe(token, me.user_id, ["comments", "messages", "messaging_postbacks"])
-    .catch((e) => console.log("[bootstrap] no se pudo suscribir a los webhooks", String(e)))
+    .catch((e) => console.log("[bootstrap] could not subscribe to webhooks", String(e)))
   const remember = () =>
     db.query(
       `insert into app_settings (key, value) values ('imported_token', $1)
        on conflict (key) do update set value = excluded.value, updated_at = now()`,
       [fingerprint],
     )
-  // el token del panel de Meta dura 60 días; sin la fecha exacta, se asume 55
+  // a token from the Meta dashboard lasts 60 days; without the exact date, 55 is assumed
   const [updated] = await db.query(
     `update ig_accounts set access_token_enc = $2, username = $3, profile_pic_url = coalesce($4, profile_pic_url),
        token_expires_at = now() + interval '55 days', status = 'ok', webhooks_subscribed = true
@@ -78,10 +79,10 @@ export async function importAccountFromEnv(db: Db, ig: InstagramClient) {
   )
   if (updated) {
     await remember()
-    console.log("[bootstrap] token nuevo cargado para", me.username)
+    console.log("[bootstrap] new token loaded for", me.username)
     return
   }
-  if (existing) return // el token es de otra cuenta: se conecta desde el panel
+  if (existing) return // the token belongs to another account: it is connected from the dashboard
   await db.query(
     `insert into ig_accounts (user_id, ig_user_id, username, profile_pic_url, access_token_enc, token_expires_at, webhooks_subscribed)
      values ($1, $2, $3, $4, $5, now() + interval '55 days', true)`,
@@ -90,7 +91,7 @@ export async function importAccountFromEnv(db: Db, ig: InstagramClient) {
   await remember()
 }
 
-/** La automatización del núcleo, en borrador, para la primera cuenta sin automatizaciones. */
+/** The core automation, as a draft, for the first account with no automations. */
 export async function seedDefaultAutomation(db: Db) {
   const [acc] = await db.query<{ id: string; username: string }>(
     `select a.id, a.username from ig_accounts a
@@ -98,18 +99,21 @@ export async function seedDefaultAutomation(db: Db) {
      order by a.created_at limit 1`,
   )
   if (!acc) return
+  // the same texts a new automation gets in the English wizard
+  const w = defaultWizard(acc.id, "en")
   const graph = commentToDmGraph({
-    opening: "¡Hola! Vi tu comentario 🙌 ¿Te mando el link por aquí?",
-    openingButton: "Sí, mándamelo",
-    followPrompt: "Una cosita antes: el link es para quienes me siguen. Sígueme y toca «Ya te sigo» 💛",
-    followedButton: "Ya te sigo",
-    linkText: "¡Listo! Aquí lo tienes 👇",
-    links: [{ title: "Abrir link", url: "https://example.com" }],
+    opening: w.opening.text,
+    openingButton: w.opening.button,
+    followPrompt: w.askFollow.text,
+    followedButton: w.askFollow.button,
+    linkText: w.link.text,
+    links: [{ title: w.link.links[0].title, url: "https://example.com" }],
+    profileButton: "Go to profile",
   })
   await db.tx(async (q) => {
     const [a] = await q.query<{ id: string }>(
       `insert into automations (ig_account_id, name, kind, template, status) values ($1, $2, 'quick', 'comment_dm', 'draft') returning id`,
-      [acc.id, "Comentario LINK → DM con link"],
+      [acc.id, "LINK comment → DM with link"],
     )
     const [v] = await q.query<{ id: string }>(
       `insert into automation_versions (automation_id, version, graph) values ($1, 1, $2) returning id`,

@@ -1,4 +1,4 @@
-/** true si `a` es una versión mayor que `b`, comparando número por número. */
+/** true if `a` is a higher version than `b`, comparing number by number. */
 export function isNewer(a: string | null | undefined, b: string): boolean {
   if (!a) return false
   const pa = a.split(".").map((n) => Number.parseInt(n, 10) || 0)

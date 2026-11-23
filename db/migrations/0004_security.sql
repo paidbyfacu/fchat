@@ -1,5 +1,5 @@
--- Sesiones del panel guardadas en la base: salir, cambiar la contraseña o cerrar
--- una sesión desde Ajustes la anula de verdad, aunque alguien haya copiado la cookie.
+-- Dashboard sessions stored in the database: logging out, changing the password or
+-- closing a session from Settings really revokes it, even if someone copied the cookie.
 create table if not exists sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
@@ -12,8 +12,8 @@ create table if not exists sessions (
 );
 create index if not exists sessions_user_idx on sessions (user_id);
 
--- Intentos de entrar, para frenar a quien prueba contraseñas. Cada intento se anota
--- antes de revisar la contraseña; checked marca los que de verdad se revisaron.
+-- Login attempts, to slow down password guessing. Each attempt is recorded before
+-- the password is checked; checked marks the ones that really were checked.
 create table if not exists login_attempts (
   id bigserial primary key,
   ip text not null,

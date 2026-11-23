@@ -1,9 +1,11 @@
-// Guardar, publicar y borrar automatizaciones creadas con el asistente.
-// Publicar = versión nueva del grafo + trigger nuevo; los runs en curso
-// terminan con la versión con la que empezaron.
+// Save, publish and delete automations made with the wizard.
+// Publishing = new graph version + new trigger; runs in progress
+// finish with the version they started with.
 
 import type { Db } from "./db"
 import { validateWizard, type Wizard, type WizardIssue } from "@/lib/wizard"
+import { fmt, quote, type Locale } from "@/lib/i18n/locale"
+import { getMessages } from "@/lib/i18n"
 import { compileWizard, wizardFromGraph } from "./engine/compile"
 import type { Graph } from "./engine/graph"
 
@@ -13,12 +15,13 @@ export type SaveResult =
 
 const isUnique = (e: unknown, name: string) => (e as { code?: string; constraint?: string; message?: string })?.code === "23505" && String((e as { message?: string }).message ?? "").includes(name)
 
-export async function saveAutomation(db: Db, userId: string, id: string | null, w: Wizard, publish: boolean): Promise<SaveResult> {
-  const issues = publish ? validateWizard(w) : validateWizard(w).filter((i) => i.field === "name" || i.field === "accountId")
+export async function saveAutomation(db: Db, userId: string, id: string | null, w: Wizard, publish: boolean, locale: Locale = "es"): Promise<SaveResult> {
+  const t = getMessages(locale).wizard
+  const issues = publish ? validateWizard(w, locale) : validateWizard(w, locale).filter((i) => i.field === "name" || i.field === "accountId")
   if (issues.length) return { ok: false, issues }
 
   const [acc] = await db.query(`select id from ig_accounts where id = $1 and user_id = $2`, [w.accountId, userId])
-  if (!acc) return { ok: false, issues: [{ field: "accountId", message: "Esa cuenta no es tuya o ya no está conectada." }] }
+  if (!acc) return { ok: false, issues: [{ field: "accountId", message: t.errNotYours }] }
 
   try {
     const savedId = await db.tx(async (q) => {
@@ -39,14 +42,14 @@ export async function saveAutomation(db: Db, userId: string, id: string | null, 
         aid = a.id
       }
       if (publish) {
-        const { graph, trigger } = compileWizard(w)
+        const { graph, trigger } = compileWizard(w, locale)
         const [{ v }] = await q.query<{ v: number }>(`select coalesce(max(version), 0) + 1 v from automation_versions where automation_id = $1`, [aid])
         const [ver] = await q.query<{ id: string }>(
           `insert into automation_versions (automation_id, version, graph) values ($1, $2, $3) returning id`,
           [aid, v, JSON.stringify(graph)],
         )
         await q.query(`update automations set live_version_id = $2, status = 'live' where id = $1`, [aid, ver.id])
-        // si sigue esperando el "próximo post" sin cambios de alcance, se conserva el post ya asignado
+        // still waiting for the "next post" with the same scope: keep the post already assigned
         const [prev] = await q.query<{ post_scope: string; media_id: string | null; armed_at: Date | null }>(
           `select post_scope, media_id, armed_at from triggers where automation_id = $1 order by created_at limit 1`,
           [aid],
@@ -73,21 +76,22 @@ export async function saveAutomation(db: Db, userId: string, id: string | null, 
       }
       return aid!
     })
-    return { ok: true, id: savedId, warnings: publish ? await conflicts(db, savedId) : [] }
+    return { ok: true, id: savedId, warnings: publish ? await conflicts(db, savedId, locale) : [] }
   } catch (e) {
-    if ((e as Error).message === "NOT_FOUND") return { ok: false, issues: [{ field: "name", message: "No encontré esa automatización." }] }
+    if ((e as Error).message === "NOT_FOUND") return { ok: false, issues: [{ field: "name", message: t.errNotFound }] }
     if (isUnique(e, "one_armed_next_post")) {
       return {
         ok: false,
-        issues: [{ field: "posts", message: "Ya hay otra automatización activa esperando el próximo post. Solo puede haber una a la vez." }],
+        issues: [{ field: "posts", message: t.errNextTaken }],
       }
     }
     throw e
   }
 }
 
-/** Otras automatizaciones activas de la misma cuenta que pueden responder el mismo comentario. */
-async function conflicts(db: Db, id: string): Promise<string[]> {
+/** Other active automations of the same account that may reply to the same comment. */
+async function conflicts(db: Db, id: string, locale: Locale): Promise<string[]> {
+  const t = getMessages(locale).wizard
   const rows = await db.query<{ name: string; shared: string[]; any_match: boolean }>(
     `select a2.name,
        array(select unnest(t1.keywords_include) intersect select unnest(t2.keywords_include)) shared,
@@ -103,8 +107,8 @@ async function conflicts(db: Db, id: string): Promise<string[]> {
     .filter((r) => r.any_match || r.shared.length)
     .map((r) =>
       r.shared.length
-        ? `«${r.name}» también responde a ${r.shared.map((k) => `«${k}»`).join(", ")}. Gana la que tiene palabras y, entre esas, la más vieja.`
-        : `«${r.name}» responde a cualquier comentario en algunos de los mismos posts. La que tiene palabras va primero.`,
+        ? fmt(t.warnShared, { name: r.name, words: r.shared.map((k) => quote(locale, k)).join(", ") })
+        : fmt(t.warnAny, { name: r.name }),
     )
 }
 
@@ -117,7 +121,7 @@ export async function deleteAutomation(db: Db, userId: string, id: string): Prom
   return rows.length > 0
 }
 
-/** El estado del asistente para editar: el guardado, o reconstruido desde el grafo. */
+/** The wizard state for editing: the saved one, or rebuilt from the graph. */
 export async function loadWizard(db: Db, userId: string, id: string): Promise<{ wizard: Wizard; status: string } | null> {
   const [a] = await db.query<{
     name: string

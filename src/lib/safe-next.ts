@@ -1,4 +1,4 @@
-/** Adónde volver después de entrar. Solo rutas internas: nada de //sitio.com, /\sitio.com ni espacios que el navegador limpia. */
+/** Where to go back after logging in. Internal paths only: no //site.com, /\site.com or whitespace the browser strips. */
 export function safeNext(next: string): string {
   return /^\/(?![/\\])[^\s\\]*$/.test(next) ? next : "/"
 }

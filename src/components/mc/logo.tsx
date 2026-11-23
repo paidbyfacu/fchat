@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 
-/** Ícono cuadrado: globo de chat con un rayo. Solo para espacios chicos, como la pestaña. */
+/** Square icon: a chat bubble with a lightning bolt. Only for small spaces, like the browser tab. */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" aria-hidden className={cn("size-8 shrink-0", className)}>
@@ -14,7 +14,7 @@ export function LogoMark({ className }: { className?: string }) {
   )
 }
 
-/** Logo de FChat: la palabra FChat y debajo «by paidbyfacu». */
+/** FChat logo: the word FChat with "by paidbyfacu" below. */
 export function Logo({ className, size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) {
   return (
     <span className={cn("inline-grid select-none justify-items-start leading-none", className)} aria-label="FChat by paidbyfacu">

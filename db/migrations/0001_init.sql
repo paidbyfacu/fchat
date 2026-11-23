@@ -1,8 +1,8 @@
--- Esquema del clon (Instagram). Postgres 15+.
--- Todo en UTC (timestamptz). Dueño único: el acceso se chequea en la capa de
--- datos (cada consulta filtra por ig_account_id de una cuenta del usuario logueado).
--- Sin cola externa: webhook_events (pendientes) y flow_runs (esperas) son la cola.
--- gen_random_uuid() es nativo desde Postgres 13: no hace falta pgcrypto.
+-- FChat schema for Instagram. Postgres 15+.
+-- Everything in UTC, timestamptz. Single owner: access is checked in the data layer,
+-- where each query filters by ig_account_id of an account of the logged-in user.
+-- No external queue: webhook_events, pending, and flow_runs, waiting, are the queue.
+-- gen_random_uuid() is built in since Postgres 13: no pgcrypto needed.
 
 
 create or replace function set_updated_at() returns trigger
@@ -12,7 +12,7 @@ begin
   return new;
 end $$;
 
--- 1. Usuarios del panel (hoy: solo vos)
+-- 1. Dashboard users, today only the owner
 create table users (
   id uuid primary key default gen_random_uuid(),
   email text not null unique,
@@ -22,14 +22,14 @@ create table users (
   updated_at timestamptz not null default now()
 );
 
--- 2. Cuentas de Instagram conectadas (S02)
+-- 2. Connected Instagram accounts (S02)
 create table ig_accounts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
-  ig_user_id text not null unique,          -- el id que llega en entry.id del webhook
+  ig_user_id text not null unique,          -- the id that arrives in the webhook entry.id
   username text not null,
   profile_pic_url text,
-  access_token_enc bytea not null,          -- AES-256-GCM con TOKEN_ENC_KEY
+  access_token_enc bytea not null,          -- AES-256-GCM with TOKEN_ENC_KEY
   token_expires_at timestamptz not null,
   scopes text[] not null default '{}',
   status text not null default 'ok'
@@ -41,7 +41,7 @@ create table ig_accounts (
 create index on ig_accounts (user_id);
 create index on ig_accounts (token_expires_at) where status = 'ok';
 
--- 3. Automatizaciones (S04)
+-- 3. Automations (S04)
 create table automations (
   id uuid primary key default gen_random_uuid(),
   ig_account_id uuid not null references ig_accounts(id) on delete cascade,
@@ -49,14 +49,14 @@ create table automations (
   kind text not null default 'quick' check (kind in ('quick','flow')),
   template text check (template in ('comment_dm','dm_keyword','story_reply')),
   status text not null default 'draft' check (status in ('draft','live','stopped')),
-  live_version_id uuid,                     -- FK abajo (referencia circular)
-  wizard jsonb not null default '{}',       -- estado del asistente S05, si kind = quick
+  live_version_id uuid,                     -- FK below, circular reference
+  wizard jsonb not null default '{}',       -- S05 wizard state, if kind = quick
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index on automations (ig_account_id, status);
 
--- 4. Versiones publicadas del grafo (S07). Inmutables: editar = versión nueva.
+-- 4. Published graph versions (S07). Immutable: editing = a new version.
 create table automation_versions (
   id uuid primary key default gen_random_uuid(),
   automation_id uuid not null references automations(id) on delete cascade,
@@ -70,21 +70,21 @@ alter table automations
   add constraint automations_live_version_fk
   foreign key (live_version_id) references automation_versions(id) on delete set null;
 
--- 5. Disparadores (S09)
+-- 5. Triggers (S09)
 create table triggers (
   id uuid primary key default gen_random_uuid(),
   automation_id uuid not null references automations(id) on delete cascade,
-  ig_account_id uuid not null references ig_accounts(id) on delete cascade, -- copia para buscar rápido
+  ig_account_id uuid not null references ig_accounts(id) on delete cascade, -- copy for fast lookups
   type text not null check (type in ('comment','dm_keyword','story_reply','ref_url')),
   post_scope text check (post_scope in ('specific','any','next')),
-  media_id text,                            -- 'specific', o 'next' una vez que se publicó el post
-  keywords_include text[] not null default '{}',  -- normalizadas: minúsculas, sin acentos
+  media_id text,                            -- 'specific', or 'next' once the post is published
+  keywords_include text[] not null default '{}',  -- normalized: lowercase, no accents
   keywords_exclude text[] not null default '{}',
   match text not null default 'contains' check (match in ('any','contains','exact')),
   public_replies text[] not null default '{}',
-  ref text,                                 -- para ref_url (ig.me/m/usuario?ref=...)
+  ref text,                                 -- for ref_url, ig.me/m/username?ref=...
   is_active boolean not null default false, -- = automations.status = 'live'
-  armed_at timestamptz,                     -- 'next': solo posts publicados después de esto
+  armed_at timestamptz,                     -- 'next': only posts published after this
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint comment_needs_scope check (type <> 'comment' or post_scope is not null),
@@ -93,25 +93,25 @@ create table triggers (
 create index on triggers (ig_account_id, type, is_active);
 create index on triggers (automation_id);
 create index on triggers (media_id) where media_id is not null;
--- Solo un "próximo post" esperando por cuenta
+-- Only one "next post" waiting per account
 create unique index one_armed_next_post on triggers (ig_account_id)
   where type = 'comment' and post_scope = 'next' and media_id is null and is_active;
 create unique index one_ref_per_account on triggers (ig_account_id, ref) where ref is not null;
 
--- 6. Contactos (S11, S12)
+-- 6. Contacts (S11, S12)
 create table contacts (
   id uuid primary key default gen_random_uuid(),
   ig_account_id uuid not null references ig_accounts(id) on delete cascade,
-  igsid text not null,                      -- Instagram-scoped id del usuario
+  igsid text not null,                      -- the user's Instagram-scoped id
   username text,
   name text,
   profile_pic_url text,
-  follows_business boolean,                 -- último valor leído; null = nunca chequeado
+  follows_business boolean,                 -- last value read; null = never checked
   follows_checked_at timestamptz,
-  opted_in boolean not null default false,  -- tocó un botón / respondió alguna vez
-  last_inbound_at timestamptz,              -- abre la ventana de 24 h
+  opted_in boolean not null default false,  -- tapped a button or replied at some point
+  last_inbound_at timestamptz,              -- opens the 24 h window
   email text,
-  automation_paused_until timestamptz,      -- toma humana desde la bandeja (S13)
+  automation_paused_until timestamptz,      -- human takeover from the inbox (S13)
   blocked boolean not null default false,
   last_message_at timestamptz,
   unread_count int not null default 0,
@@ -123,7 +123,7 @@ create index on contacts (ig_account_id, last_message_at desc);
 create index on contacts (ig_account_id, created_at desc);
 create index on contacts (ig_account_id, lower(username));
 
--- 7–8. Etiquetas
+-- 7–8. Tags
 create table tags (
   id uuid primary key default gen_random_uuid(),
   ig_account_id uuid not null references ig_accounts(id) on delete cascade,
@@ -140,7 +140,7 @@ create table contact_tags (
 );
 create index on contact_tags (tag_id);
 
--- 9–10. Campos personalizados
+-- 9–10. Custom fields
 create table custom_fields (
   id uuid primary key default gen_random_uuid(),
   ig_account_id uuid not null references ig_accounts(id) on delete cascade,
@@ -160,23 +160,23 @@ create table contact_field_values (
 );
 create index on contact_field_values (field_id);
 
--- 11. Mensajes (S13)
+-- 11. Messages (S13)
 create table messages (
   id uuid primary key default gen_random_uuid(),
   contact_id uuid not null references contacts(id) on delete cascade,
   direction text not null check (direction in ('in','out')),
-  mid text,                                 -- id de Meta; null si el envío falló
+  mid text,                                 -- Meta id; null if the send failed
   kind text not null check (kind in ('text','template','quick_reply','postback','media','private_reply','story_reply')),
   body jsonb not null,
-  sent_by text check (sent_by in ('bot','human')),  -- solo para 'out'
-  run_id uuid,                              -- FK abajo
-  error jsonb,                              -- respuesta de Meta si falló
+  sent_by text check (sent_by in ('bot','human')),  -- only for 'out'
+  run_id uuid,                              -- FK below
+  error jsonb,                              -- Meta response if it failed
   created_at timestamptz not null default now()
 );
 create unique index messages_mid_unique on messages (mid) where mid is not null;
 create index on messages (contact_id, created_at desc);
 
--- 12. Webhooks crudos: se guardan antes de procesar (idempotencia + re-procesar)
+-- 12. Raw webhooks: stored before processing, for idempotency and reprocessing
 create table webhook_events (
   id uuid primary key default gen_random_uuid(),
   dedupe_key text not null unique,          -- comment:<id> | mid:<mid> | postback:<mid> | read:<mid>...
@@ -191,7 +191,7 @@ create table webhook_events (
 create index on webhook_events (status, received_at) where status in ('pending','failed');
 create index on webhook_events (received_at);
 
--- 13. Comentarios que vimos y qué hicimos con cada uno
+-- 13. Comments we saw and what we did with each one
 create table comment_events (
   id uuid primary key default gen_random_uuid(),
   ig_account_id uuid not null references ig_accounts(id) on delete cascade,
@@ -214,11 +214,11 @@ create table comment_events (
 );
 create index on comment_events (ig_account_id, created_at desc);
 create index on comment_events (trigger_id);
--- Una persona dispara una sola vez por post y trigger
+-- A person fires only once per post and trigger
 create unique index one_reply_per_person_per_post on comment_events (trigger_id, media_id, igsid)
   where status in ('matched','replied');
 
--- 14. Ejecuciones de flujo: el motor con estado (delays, botones, recordatorios)
+-- 14. Flow runs: the stateful engine, for delays, buttons and reminders
 create table flow_runs (
   id uuid primary key default gen_random_uuid(),
   contact_id uuid not null references contacts(id) on delete cascade,
@@ -228,7 +228,7 @@ create table flow_runs (
   current_node text,
   waiting_for text check (waiting_for in ('button','input','time','follow')),
   resume_at timestamptz,
-  attempts int not null default 0,          -- p. ej. reintentos de "Ya te sigo"
+  attempts int not null default 0,          -- e.g. "Following" retries
   vars jsonb not null default '{}',
   status text not null default 'running'
     check (status in ('running','waiting','done','expired','failed','cancelled')),
@@ -241,17 +241,17 @@ create table flow_runs (
 create index on flow_runs (contact_id);
 create index on flow_runs (automation_id, started_at desc);
 create index on flow_runs (resume_at) where status = 'waiting' and resume_at is not null;
--- Un solo run vivo por contacto y automatización
+-- Only one live run per contact and automation
 create unique index one_live_run on flow_runs (contact_id, automation_id)
   where status in ('running','waiting');
 alter table messages
   add constraint messages_run_fk foreign key (run_id) references flow_runs(id) on delete set null;
 create index on messages (run_id);
 
--- 15. Links con seguimiento (/l/<code>)
+-- 15. Tracked links, /l/<code>
 create table tracked_links (
   id uuid primary key default gen_random_uuid(),
-  code text not null unique,                -- corto, aleatorio
+  code text not null unique,                -- short, random
   run_id uuid references flow_runs(id) on delete set null,
   contact_id uuid references contacts(id) on delete cascade,
   automation_id uuid references automations(id) on delete cascade,
@@ -265,7 +265,7 @@ create index on tracked_links (run_id);
 create index on tracked_links (contact_id);
 create index on tracked_links (automation_id);
 
--- 16. Eventos del embudo para Insights (S10)
+-- 16. Funnel events for Insights (S10)
 create table automation_events (
   id bigint generated always as identity primary key,
   automation_id uuid not null references automations(id) on delete cascade,
@@ -280,7 +280,7 @@ create index on automation_events (automation_id, step, created_at);
 create index on automation_events (contact_id);
 create index on automation_events (run_id);
 
--- updated_at automático
+-- automatic updated_at
 do $$
 declare t text;
 begin

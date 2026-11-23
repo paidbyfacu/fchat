@@ -1,6 +1,6 @@
-// El grafo de una automatización (automation_versions.graph) y su traducción a
-// mensajes de Instagram. El asistente (hito 2) y el editor visual (hito 4)
-// producen este mismo formato.
+// An automation's graph, automation_versions.graph, and its translation into
+// Instagram messages. The wizard of milestone 2 and the visual editor of milestone 4
+// produce this same format.
 
 import type { IgMessage } from "../instagram"
 
@@ -19,7 +19,7 @@ export type SendMessageNode = {
   buttons?: GraphButton[]
   quick_replies?: { id: string; title: string; next?: string }[]
   next?: string
-  /** cuántas veces se puede repetir este nodo en un mismo run (p. ej. "Ya te sigo") */
+  /** how many times this node can repeat in one run, as with "Following" */
   max_loops?: number
   on_max?: string
   step?: FunnelStep
@@ -35,12 +35,12 @@ export function findNode(g: Graph, id: string | null | undefined): GraphNode | u
   return id ? g.nodes.find((n) => n.id === id) : undefined
 }
 
-/** El nodo espera un toque si tiene algún botón de respuesta o quick reply. */
+/** The node waits for a tap if it has any reply button or quick reply. */
 export function waitsForTap(n: SendMessageNode): boolean {
   return Boolean(n.buttons?.some((b) => b.type === "postback") || n.quick_replies?.length)
 }
 
-/** Siguiente nodo al tocar un botón o quick reply de este nodo. */
+/** Next node when a button or quick reply of this node is tapped. */
 export function nextAfterTap(n: SendMessageNode, buttonId: string): { found: boolean; next?: string } {
   const b = n.buttons?.find((x) => x.id === buttonId)
   if (b) return { found: true, next: b.type === "postback" ? b.next : undefined }
@@ -88,7 +88,7 @@ export function toIgMessage(n: SendMessageNode, runId: string, username: string)
   return { text: n.text }
 }
 
-/** La automatización del núcleo: comentario → DM → ¿me seguís? → link. */
+/** The core automation: comment → DM → do you follow me? → link. */
 export function commentToDmGraph(o: {
   opening: string
   openingButton: string
@@ -97,6 +97,8 @@ export function commentToDmGraph(o: {
   linkText: string
   links: { title: string; url: string }[]
   maxFollowAsks?: number
+  /** Text of the button that opens the profile, in the language of the other texts. */
+  profileButton?: string
 }): Graph {
   return {
     start: "open",
@@ -115,10 +117,10 @@ export function commentToDmGraph(o: {
         type: "send_message",
         text: o.followPrompt,
         buttons: [
-          { id: "profile", type: "profile", title: "Ir al perfil" },
+          { id: "profile", type: "profile", title: o.profileButton ?? "Ir al perfil" },
           { id: "done", type: "postback", title: o.followedButton, next: "check" },
         ],
-        // 0 = hasta que siga, sin tope
+        // 0 = until they follow, no limit
         ...(o.maxFollowAsks === 0 ? {} : { max_loops: o.maxFollowAsks ?? 3, on_max: "link" }),
         step: "follow_asked",
       },

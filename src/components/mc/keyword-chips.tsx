@@ -4,17 +4,19 @@ import { useId, useRef, useState } from "react"
 import { XIcon } from "lucide-react"
 import { normalizeKeyword } from "@/lib/keywords"
 import { cn } from "@/lib/utils"
+import { fmt } from "@/lib/i18n/locale"
+import { useT } from "@/components/i18n"
 
 /**
- * Input que convierte en chip al escribir coma o Enter. Muestra lo que
- * escribiste; los duplicados se comparan normalizados (sin acentos ni mayúsculas).
+ * Input that turns words into chips on comma or Enter. Shows what was typed;
+ * duplicates are compared normalized, ignoring accents and case.
  */
 export function KeywordChips({
   label,
   value,
   onChange,
   variant = "include",
-  placeholder = "Escribe una palabra y Enter",
+  placeholder,
 }: {
   label: string
   value: string[]
@@ -23,6 +25,7 @@ export function KeywordChips({
   placeholder?: string
 }) {
   const id = useId()
+  const { t } = useT()
   const inputRef = useRef<HTMLInputElement>(null)
   const [draft, setDraft] = useState("")
   const [flash, setFlash] = useState<string | null>(null)
@@ -64,7 +67,7 @@ export function KeywordChips({
             {w}
             <button
               type="button"
-              aria-label={`Quitar ${w}`}
+              aria-label={fmt(t.ui.removeChip, { word: w })}
               onClick={(e) => {
                 e.stopPropagation()
                 onChange(value.filter((x) => x !== w))
@@ -79,7 +82,7 @@ export function KeywordChips({
           ref={inputRef}
           id={id}
           value={draft}
-          placeholder={value.length ? "" : placeholder}
+          placeholder={value.length ? "" : (placeholder ?? t.ui.chipsPlaceholder)}
           onChange={(e) => {
             if (e.target.value.includes(",")) add(e.target.value)
             else setDraft(e.target.value)

@@ -1,5 +1,5 @@
-// Cliente de la API de Instagram (Instagram API with Instagram Login).
-// El motor recibe un InstagramClient: en tests se usa uno falso.
+// Client for the Instagram API with Instagram Login.
+// The engine receives an InstagramClient: tests use a fake one.
 
 export type IgMessage =
   | { text: string; quick_replies?: { content_type: "text"; title: string; payload: string }[] }
@@ -38,7 +38,7 @@ export class IgError extends Error {
   ) {
     super(message)
   }
-  /** 190 = token vencido o revocado */
+  /** 190 = expired or revoked token */
   get tokenInvalid() {
     return this.code === 190
   }
@@ -98,7 +98,7 @@ export function httpInstagram(apiVersion: string, fetchImpl: typeof fetch = fetc
       url.searchParams.set("access_token", token)
       const res = await fetchImpl(url, { signal: AbortSignal.timeout(20_000) })
       const json = (await res.json()) as { access_token?: string; expires_in?: number; error?: { message?: string; code?: number } }
-      if (!res.ok || !json.access_token) throw new IgError(json.error?.message ?? "refresh falló", res.status, json.error?.code, json)
+      if (!res.ok || !json.access_token) throw new IgError(json.error?.message ?? "refresh failed", res.status, json.error?.code, json)
       return { access_token: json.access_token, expires_in: json.expires_in ?? 60 * 86400 }
     },
   }

@@ -1,4 +1,7 @@
-// Límites de la API de Instagram (button template y quick replies).
+import { getMessages } from "@/lib/i18n"
+import { fmt, type Locale } from "@/lib/i18n/locale"
+
+// Instagram API limits for the button template and quick replies.
 export const LIMITS = {
   text: 640,
   buttons: 3,
@@ -28,20 +31,21 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-/** Problemas que impiden publicar o que conviene avisar, en el orden en que se muestran. */
-export function messageIssues(m: Message, { isFirst }: { isFirst: boolean }) {
+/** Problems that block publishing or are worth a warning, in the order they are shown. */
+export function messageIssues(m: Message, { isFirst, locale = "es" }: { isFirst: boolean; locale?: Locale }) {
+  const t = getMessages(locale).ui
   const errors: string[] = []
   const warnings: string[] = []
-  if (!m.text.trim()) errors.push("El mensaje está vacío.")
-  if (m.text.length > LIMITS.text) errors.push(`El texto supera los ${LIMITS.text} caracteres.`)
-  if (m.buttons.length > LIMITS.buttons) errors.push(`Máximo ${LIMITS.buttons} botones.`)
+  if (!m.text.trim()) errors.push(t.errEmpty)
+  if (m.text.length > LIMITS.text) errors.push(fmt(t.errTooLong, { n: LIMITS.text }))
+  if (m.buttons.length > LIMITS.buttons) errors.push(fmt(t.errMaxButtons, { n: LIMITS.buttons }))
   for (const b of m.buttons) {
-    if (!b.title.trim()) errors.push("Hay un botón sin texto.")
-    if (b.title.length > LIMITS.buttonTitle) warnings.push(`«${b.title}» puede verse cortado en Instagram.`)
-    if (b.type === "url" && !isValidUrl(b.url)) errors.push(`«${b.title || "Link"}» no tiene una URL válida.`)
+    if (!b.title.trim()) errors.push(t.errButtonEmpty)
+    if (b.title.length > LIMITS.buttonTitle) warnings.push(fmt(t.warnCut, { title: b.title }))
+    if (b.type === "url" && !isValidUrl(b.url)) errors.push(fmt(t.errBadUrl, { title: b.title || t.typeLink }))
   }
   if (isFirst && !m.buttons.some((b) => b.type === "postback") && !m.quickReplies.length) {
-    warnings.push("Sin un botón de respuesta no vas a poder seguir la conversación: los links no la abren.")
+    warnings.push(t.warnNoReply)
   }
   return { errors, warnings }
 }

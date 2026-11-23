@@ -1,8 +1,8 @@
-// El worker. En la PC o en un servidor propio vive dentro del proceso de Next
-// (lo arranca instrumentation.ts) y corre un ciclo cada 2 segundos.
-// En Vercel no hay proceso fijo: el webhook corre el ciclo justo después de
-// responder, con after(), y /api/cron lo corre de vez en cuando para los
-// reintentos, los runs colgados y la renovación de tokens.
+// The worker. On a computer or your own server it lives inside the Next process,
+// started by instrumentation.ts, and runs a cycle every 2 seconds.
+// On Vercel there is no long-running process: the webhook runs the cycle right after
+// responding, with after(), and /api/cron runs it now and then for retries, stuck
+// runs and token renewal.
 
 import { getDb } from "./db"
 import { decrypt, encrypt } from "./crypto"
@@ -34,28 +34,28 @@ async function refreshTokens() {
         `update ig_accounts set access_token_enc = $2, token_expires_at = now() + make_interval(secs => $3) where id = $1`,
         [a.id, encrypt(r.access_token, d.encKey), r.expires_in],
       )
-      log("token renovado", a.username)
+      log("token renewed", a.username)
     } catch (e) {
-      log("no se pudo renovar el token", { account: a.username, error: String(e) })
+      log("could not renew the token", { account: a.username, error: String(e) })
     }
   }
 }
 
-/** Usuario dueño, cuenta desde IG_ACCESS_TOKEN y automatización de ejemplo. Una vez por proceso. */
+/** Owner user, account from IG_ACCESS_TOKEN and sample automation. Once per process. */
 export function bootstrap(): Promise<void> {
   g.__boot ??= (async () => {
     const d = await deps()
     await ensureOwner(d.db)
-    await importAccountFromEnv(d.db, d.ig).catch((e) => log("importar la cuenta falló", String(e)))
+    await importAccountFromEnv(d.db, d.ig).catch((e) => log("account import failed", String(e)))
     await seedDefaultAutomation(d.db)
   })().catch((e) => {
-    g.__boot = undefined // que el próximo intento lo vuelva a probar
+    g.__boot = undefined // so the next attempt tries again
     throw e
   })
   return g.__boot
 }
 
-/** Un ciclo completo. Las tareas lentas solo si se piden. */
+/** A full cycle. Slow tasks only when asked for. */
 export async function runCycle(opts: { expire?: boolean; refresh?: boolean } = {}) {
   const d = await deps()
   const processed = await processPending(d)
@@ -77,7 +77,7 @@ export async function tick() {
     if (refresh) s.lastRefresh = now
     await runCycle({ expire, refresh })
   } catch (e) {
-    log("ciclo falló", String(e))
+    log("cycle failed", String(e))
   } finally {
     s.busy = false
   }
@@ -87,7 +87,7 @@ export function kick() {
   void tick()
 }
 
-/** En Vercel cada función vive poco: sin intervalo, solo el arranque. */
+/** On Vercel each function lives briefly: no interval, only startup. */
 export const isServerless = () => !!process.env.VERCEL
 
 export async function startWorker() {
@@ -95,5 +95,5 @@ export async function startWorker() {
   if (isServerless() || g.__worker?.started) return
   g.__worker = { started: true, busy: false, lastExpire: 0, lastRefresh: Date.now() }
   setInterval(tick, 2000).unref()
-  log("listo")
+  log("ready")
 }

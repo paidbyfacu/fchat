@@ -1,4 +1,4 @@
-// Lecturas del panel. Todas filtran por las cuentas del usuario logueado.
+// Dashboard reads. All of them filter by the logged-in user's accounts.
 
 import { getDb } from "./db"
 
@@ -38,7 +38,7 @@ export async function listAutomations(userId: string) {
   const db = await getDb()
   return db.query<AutomationRow>(
     `select a.id, a.name, a.status, a.updated_at, acc.username,
-       -- sin trigger (borrador nunca publicado): lo que dice el asistente
+       -- no trigger, a draft never published: what the wizard says
        coalesce(t.keywords_include, array(select jsonb_array_elements_text(a.wizard->'include'))) keywords,
        coalesce(t.post_scope, a.wizard->>'scope') post_scope,
        coalesce(t.media_ids, array(select jsonb_array_elements(a.wizard->'posts')->>'id')) media_ids,
@@ -122,7 +122,7 @@ export async function recentComments(userId: string, limit = 8) {
   )
 }
 
-/** Mensajes sin leer en las conversaciones abiertas, para el número de la Bandeja en el menú. */
+/** Unread messages in open conversations, for the Inbox count in the menu. */
 export async function unreadTotal(userId: string) {
   const db = await getDb()
   const [r] = await db.query<{ n: number }>(
@@ -143,7 +143,7 @@ export type HomeSummary = {
   humanReplies: number
 }
 
-/** Números del inicio y de «Tus próximos mejores pasos». */
+/** Numbers for the home page and its next steps. */
 export async function homeSummary(userId: string): Promise<HomeSummary> {
   const db = await getDb()
   const [r] = await db.query<HomeSummary>(

@@ -7,19 +7,21 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Skeleton } from "@/components/ui/skeleton"
 import type { PickedPost } from "@/lib/wizard"
 import { cn } from "@/lib/utils"
+import { fmt, intlLocale, type Locale } from "@/lib/i18n/locale"
+import { useT } from "@/components/i18n"
 
-type Item = PickedPost & { kind: "post" | "reel" | "carrusel" }
+type Item = PickedPost & { kind: "post" | "reel" | "carousel" }
 
-async function fetchMedia(accountId: string, cursor?: string): Promise<{ items: Item[]; after?: string }> {
+async function fetchMedia(accountId: string, cursor: string | undefined, fallback: string): Promise<{ items: Item[]; after?: string }> {
   const r = await fetch(`/api/instagram/media?account=${encodeURIComponent(accountId)}${cursor ? `&after=${cursor}` : ""}`)
   const body = await r.json()
-  if (!r.ok) throw new Error(body.error ?? "Instagram no respondió")
+  if (!r.ok) throw new Error(body.error ?? fallback)
   return body
 }
 
-const dateOf =(ts?: string) => (ts ? new Date(ts).toLocaleDateString("es-AR", { day: "numeric", month: "short" }) : "")
+const dateOf = (locale: Locale, ts?: string) => (ts ? new Date(ts).toLocaleDateString(intlLocale(locale), { day: "numeric", month: "short" }) : "")
 
-/** Selector de posts (S06): grilla del feed propio, selección múltiple. */
+/** Post picker (S06): grid of the account's own feed, multiple selection. */
 export function PostPicker({
   onClose,
   accountId,
@@ -33,19 +35,22 @@ export function PostPicker({
   onChange: (posts: PickedPost[]) => void
   max: number
 }) {
-  // se monta al abrir (key = cuenta): el estado arranca limpio cada vez
+  const { locale, t: all } = useT()
+  const t = all.ui
+  const kindLabel = { post: t.kindPost, reel: t.kindReel, carousel: t.kindCarousel }
+  // mounted on open, keyed by account: the state starts clean every time
   const [items, setItems] = useState<Item[]>([])
   const [after, setAfter] = useState<string | undefined>()
   const [state, setState] = useState<"loading" | "error" | "ready">("loading")
   const [error, setError] = useState("")
   const [selected, setSelected] = useState<Map<string, PickedPost>>(() => new Map(value.map((p) => [p.id, p])))
 
-  // la página actual: undefined = la primera; cambiarla dispara la carga
+  // the current page: undefined is the first one; changing it triggers the load
   const [page, setPage] = useState<{ cursor?: string; n: number }>({ n: 0 })
 
   useEffect(() => {
     let cancelled = false
-    fetchMedia(accountId, page.cursor).then(
+    fetchMedia(accountId, page.cursor, t.igNoResponse).then(
       (body) => {
         if (cancelled) return
         setItems((prev) => (page.cursor ? [...prev, ...body.items] : body.items))
@@ -61,7 +66,7 @@ export function PostPicker({
     return () => {
       cancelled = true
     }
-  }, [accountId, page])
+  }, [accountId, page, t.igNoResponse])
 
   const load = (cursor?: string) => {
     setState("loading")
@@ -81,28 +86,28 @@ export function PostPicker({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="grid max-h-[90svh] grid-rows-[auto_1fr_auto] sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Elige los posts</DialogTitle>
+          <DialogTitle>{t.pickTitle}</DialogTitle>
           <DialogDescription>
-            La automatización responde solo los comentarios de los que marques. {selected.size} de {max} elegidos.
+            {fmt(t.pickText, { n: selected.size, max })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 overflow-y-auto pr-1">
           {state === "error" && (
             <div className="grid justify-items-center gap-3 py-10 text-center">
-              <p className="text-sm text-destructive">No pude traer tus posts: {error}</p>
+              <p className="text-sm text-destructive">{fmt(t.pickError, { error })}</p>
               <Button variant="outline" onClick={() => load()}>
-                <RefreshCwIcon /> Reintentar
+                <RefreshCwIcon /> {t.retry}
               </Button>
             </div>
           )}
           {state === "ready" && items.length === 0 && (
-            <p className="py-10 text-center text-sm text-muted-foreground">Todavía no publicaste nada en esta cuenta.</p>
+            <p className="py-10 text-center text-sm text-muted-foreground">{t.noPosts}</p>
           )}
-          <ul role="group" aria-label="Tus posts y reels" className="grid grid-cols-3 gap-2 lg:grid-cols-4">
+          <ul role="group" aria-label={t.yourPosts} className="grid grid-cols-3 gap-2 lg:grid-cols-4">
             {items.map((it) => {
               const on = selected.has(it.id)
-              const label = `${it.kind} del ${dateOf(it.timestamp)}${it.caption ? `: ${it.caption.slice(0, 60)}` : ""}`
+              const label = `${fmt(t.postLabel, { kind: kindLabel[it.kind] ?? it.kind, date: dateOf(locale, it.timestamp) })}${it.caption ? `: ${it.caption.slice(0, 60)}` : ""}`
               return (
                 <li key={it.id}>
                   <button
@@ -118,14 +123,14 @@ export function PostPicker({
                     )}
                   >
                     {it.thumbnail ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- miniaturas del CDN de Instagram, cambian de URL
+                      // eslint-disable-next-line @next/next/no-img-element -- Instagram CDN thumbnails, their URLs change
                       <img src={it.thumbnail} alt="" className="size-full object-cover" loading="lazy" />
                     ) : (
                       <ImageIcon className="m-auto size-6 text-muted-foreground" aria-hidden />
                     )}
                     <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-pill bg-black/60 px-1.5 py-0.5 text-[11px] text-white">
                       {it.kind === "reel" && <FilmIcon className="size-3" aria-hidden />}
-                      {dateOf(it.timestamp)}
+                      {dateOf(locale, it.timestamp)}
                     </span>
                     {on && (
                       <span className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground">
@@ -146,7 +151,7 @@ export function PostPicker({
           {state === "ready" && after && (
             <div className="mt-4 flex justify-center">
               <Button variant="outline" onClick={() => load(after)}>
-                Cargar más
+                {t.loadMore}
               </Button>
             </div>
           )}
@@ -154,7 +159,7 @@ export function PostPicker({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancelar
+            {t.cancel}
           </Button>
           <Button
             onClick={() => {
@@ -162,7 +167,7 @@ export function PostPicker({
               onClose()
             }}
           >
-            Usar {selected.size} {selected.size === 1 ? "post" : "posts"}
+            {selected.size === 1 ? t.useOnePost : fmt(t.useNPosts, { n: selected.size })}
           </Button>
         </DialogFooter>
       </DialogContent>

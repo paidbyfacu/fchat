@@ -1,6 +1,10 @@
-/** "Chrome en Windows", "Safari en iPhone"… a partir del user agent, para la lista de sesiones. */
-export function deviceLabel(ua: string | null | undefined): string {
-  if (!ua) return "Dispositivo desconocido"
+import { getMessages } from "@/lib/i18n"
+import { fmt, type Locale } from "@/lib/i18n/locale"
+
+/** "Chrome on Windows", "Safari on iPhone"… from the user agent, for the session list. */
+export function deviceLabel(ua: string | null | undefined, locale: Locale): string {
+  const t = getMessages(locale).settings
+  if (!ua) return t.unknownDevice
   const os = /iPhone/.test(ua)
     ? "iPhone"
     : /iPad/.test(ua)
@@ -13,7 +17,7 @@ export function deviceLabel(ua: string | null | undefined): string {
             ? "Mac"
             : /Linux/.test(ua)
               ? "Linux"
-              : "otro sistema"
+              : t.otherOs
   const browser = /Edg\//.test(ua)
     ? "Edge"
     : /OPR\/|Opera/.test(ua)
@@ -26,6 +30,6 @@ export function deviceLabel(ua: string | null | undefined): string {
             ? "Chrome"
             : /Safari\//.test(ua)
               ? "Safari"
-              : "Navegador"
-  return `${browser} en ${os}`
+              : t.browser
+  return fmt(t.deviceOn, { browser, os })
 }

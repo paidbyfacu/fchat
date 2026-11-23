@@ -1,5 +1,5 @@
--- Hito 2: un trigger puede escuchar varios posts puntuales.
--- media_id queda para el alcance 'next' (el post que se asigna al publicarse).
+-- Milestone 2: a trigger can listen to several specific posts.
+-- media_id stays for the 'next' scope, the post assigned once it is published.
 
 alter table triggers add column media_ids text[] not null default '{}';
 

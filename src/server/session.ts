@@ -1,6 +1,6 @@
-// Sesión: cookie httpOnly firmada con secrets.session, ver crypto.sign, que apunta a
-// una fila de la tabla sessions. La firma sola no alcanza: la sesión tiene que seguir
-// activa en la base, así salir o cerrarla desde Ajustes la anula de verdad.
+// Session: an httpOnly cookie signed with secrets.session, see crypto.sign, pointing to
+// a row of the sessions table. The signature alone is not enough: the session must still
+// be active in the database, so logging out or closing it from Settings really revokes it.
 
 import { cache } from "react"
 import { cookies, headers } from "next/headers"
@@ -15,7 +15,7 @@ import { TERMS_VERSION } from "@/lib/terms"
 export const SESSION_COOKIE = "sid"
 const MAX_AGE_S = 30 * 86400
 
-/** typ separa la cookie de sesión de otros tokens firmados con el mismo secreto, como el state de OAuth. */
+/** typ tells the session cookie apart from other tokens signed with the same secret, such as the OAuth state. */
 export type SessionData = { typ: "s"; sid: string; uid: string; exp: number }
 export type SessionUser = {
   id: string
@@ -23,11 +23,11 @@ export type SessionUser = {
   name: string | null
   timezone: string
   sessionId: string
-  /** Si ya aceptó los términos vigentes. Hasta entonces el panel lo manda a /setup/terminos. */
+  /** Whether they accepted the current terms. Until then the dashboard sends them to /setup/terminos. */
   termsAccepted: boolean
 }
 
-/** IP del visitante. En Vercel x-forwarded-for lo pone Vercel y no se puede falsear. */
+/** Visitor IP. On Vercel, x-forwarded-for is set by Vercel and cannot be spoofed. */
 export function clientIp(h: Headers): string {
   return h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local"
 }
@@ -57,8 +57,8 @@ export async function readSessionToken(token: string | undefined): Promise<Sessi
 }
 
 /**
- * Usuario de la cookie, si la sesión sigue activa en la base. Una vez por request:
- * el layout y la página la piden varias veces.
+ * The cookie's user, if the session is still active in the database. Once per request:
+ * the layout and the page ask for it several times.
  */
 export const sessionUser = cache(async (token: string | undefined): Promise<SessionUser | null> => {
   const s = await readSessionToken(token)
@@ -90,8 +90,8 @@ export async function destroySession() {
 }
 
 export async function requireUser(): Promise<SessionUser> {
-  // verify() compara la expiración con la hora actual: con Cache Components eso
-  // tiene que pasar en el request, no al prerenderizar
+  // verify() compares the expiry with the current time: with Cache Components that
+  // has to happen at request time, not while prerendering
   await connection()
   const u = await sessionUser((await cookies()).get(SESSION_COOKIE)?.value)
   if (!u) redirect("/login")
@@ -99,7 +99,7 @@ export async function requireUser(): Promise<SessionUser> {
   return u
 }
 
-/** Cierra todas las sesiones del usuario, menos la indicada si se pasa. */
+/** Closes all of the user's sessions, except the given one if passed. */
 export async function revokeSessions(userId: string, except?: string) {
   await (await getDb()).query(
     `update sessions set revoked_at = now()

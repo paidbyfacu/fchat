@@ -4,11 +4,11 @@ This guide sets up the Meta app that connects FChat to your Instagram account. I
 
 It takes about 15 minutes and you only do it once. It works the same on Windows and Mac, since everything happens in the browser. Keep FChat open in one tab and Meta in another.
 
-> **About the screenshots.** The FChat dashboard is in Spanish today and an English interface is on the way. Dashboard labels are written here in English, followed by the current Spanish label in italics, for example **Connect your accounts** / *Vincula tus redes*. The Meta screenshots show the Meta dashboard in Spanish; yours follows the language of your Facebook account.
+> **About the screenshots.** The FChat dashboard is available in English and Spanish, and the labels here are the English ones. The FChat screenshots show the Spanish interface. The Meta screenshots show the Meta dashboard in Spanish; yours follows the language of your Facebook account.
 
 ![The Connect your accounts guide inside FChat](img/fchat-02-vincula-tus-redes.webp)
 
-In the dashboard, every value you need to paste in Meta has a **Copy** / *Copiar* button and already includes the address of your FChat. In this guide it appears as `https://your-fchat.vercel.app`: replace it with yours. Each step is checked off in FChat on its own once it detects you did it.
+In the dashboard, every value you need to paste in Meta has a **Copy** button and already includes the address of your FChat. In this guide it appears as `https://your-fchat.vercel.app`: replace it with yours. Each step is checked off in FChat on its own once it detects you did it.
 
 Meta, Vercel and GitHub change their dashboards often. If a button has a different name, look for the closest one. Screenshots are from November 2026.
 
@@ -77,7 +77,7 @@ Copy these two values from the card at the top:
 - **Instagram app ID**: a long number.
 - **Instagram app secret**: click **Show** to see it. Meta may ask for your Facebook password.
 
-Paste them in FChat, in step 3 of **Connect your accounts**, and click **Save changes** / *Guardar los cambios*. You should see a confirmation that they were saved.
+Paste them in FChat, in step 3 of **Connect your accounts**, and click **Save changes**. You should see a confirmation that they were saved.
 
 ![Step 3 in FChat with the app ID and secret saved](img/fchat-05-datos-de-la-app.webp)
 
@@ -123,9 +123,9 @@ If verification fails:
 
    ![Business login settings window](img/meta-11-redireccion.webp)
 
-4. Go back to FChat and click **Connect Instagram** / *Conectar Instagram*. Log in with the Instagram account you want to automate and accept the permissions.
+4. Go back to FChat and click **Connect Instagram**. Log in with the Instagram account you want to automate and accept the permissions.
 
-When you come back, FChat confirms that Instagram is connected and your account shows up in **Your channels** / *Tus canales* as **Connected** / *Conectada*. Access lasts 60 days and FChat renews it on its own every day.
+When you come back, FChat confirms that Instagram is connected and your account shows up in **Your channels** as **Connected**. Access lasts 60 days and FChat renews it on its own every day.
 
 ![Instagram connected in Connect your accounts](img/fchat-10-instagram-conectado.webp)
 
@@ -135,7 +135,7 @@ If another Instagram account is logged in on your browser, Instagram connects th
 
 ![Generate access tokens section in Meta](img/meta-08-tokens.webp)
 
-In that same section, the **Webhook subscription** column should say it is on. FChat turns it on by itself when it connects the account. If it is off, click **Reactivate webhooks** / *Reactivar webhooks* under **Your channels** in FChat.
+In that same section, the **Webhook subscription** column should say it is on. FChat turns it on by itself when it connects the account. If it is off, click **Reactivate webhooks** under **Your channels** in FChat.
 
 ## 6. Publish your app
 
@@ -171,10 +171,10 @@ The `/privacy` and `/data-deletion` pages come with every installation. They are
 
 ![Step 7 in FChat: create your first automation](img/fchat-09-primera-automatizacion.webp)
 
-1. In FChat: **Automations** › **Templates** / *Automatizaciones* › *Plantillas* › **Auto-DM links from comments**, or **Get followers before sending the link** if you want people to follow you before they get it.
-2. Pick the post, a keyword such as `LINK`, and your link. Click **Publish** / *Publicar*.
+1. In FChat: **Automations** › **Templates** › **Auto-DM links from comments**, or **Get followers before sending the link** if you want people to follow you before they get it.
+2. Pick the post, a keyword such as `LINK`, and your link. Click **Publish**.
 3. From your **second account**, comment `link` on that post. Upper or lower case and accents do not matter.
-4. The second account should receive the message with the button. Tap it and follow the steps until you get the link. The conversation shows up in the FChat **Inbox** / *Bandeja*.
+4. The second account should receive the message with the button. Tap it and follow the steps until you get the link. The conversation shows up in the FChat **Inbox**.
 
 The full walkthrough, with screenshots of the wizard, the Inbox and the stats, is in the [README](../README.md#step-6-create-your-first-automation).
 
@@ -195,7 +195,7 @@ The full walkthrough, with screenshots of the wizard, the Inbox and the stats, i
 
 **"Connect Instagram" fails.** Check that you pasted the **Instagram** app ID, not the Meta one, and that the redirect URL is saved in Meta exactly as you copied it from FChat. As a fallback, connect with a token as in step 5.
 
-**It asks people to follow even though they already follow you.** Instagram can take a few seconds to report a new follower: have them tap **Following** / *Siguiendo* again. If it never recognizes them, change **Times to ask** / *Veces que se lo pide* in the automation from **Until they follow** / *Hasta que me siga* to a number, for example 2: after that many asks, the link is sent anyway.
+**It asks people to follow even though they already follow you.** Instagram can take a few seconds to report a new follower: have them tap **Following** again. If it never recognizes them, change **Times to ask** in the automation from **Until they follow** to a number, for example 2: after that many asks, the link is sent anyway.
 
 ## Instagram limits worth knowing
 

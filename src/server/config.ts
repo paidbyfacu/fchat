@@ -1,7 +1,7 @@
-// Secretos y datos de la app de Instagram. Cada uno sale primero de su variable
-// de entorno; si no está, de la base. Así una instalación nueva funciona sin
-// cargar nada en Vercel: los secretos se generan solos la primera vez y la app
-// de Instagram se configura desde el panel, en Vincula tus redes.
+// Secrets and Instagram app details. Each one comes first from its environment
+// variable and, if missing, from the database. That way a new installation works
+// without setting anything in Vercel: secrets are generated the first time and the
+// Instagram app is set up from the dashboard, in Connect your accounts.
 
 import { randomBytes } from "node:crypto"
 import { getDb } from "./db"
@@ -10,7 +10,7 @@ import { decrypt, encrypt } from "./crypto"
 const g = globalThis as unknown as { __cfg?: Map<string, Promise<string>> }
 const memo = (g.__cfg ??= new Map<string, Promise<string>>())
 
-/** Lee un secreto de app_settings o lo crea. Dos funciones a la vez se quedan con el mismo. */
+/** Reads a secret from app_settings or creates it. Two functions at once end up with the same one. */
 function generated(key: string, make: () => string): Promise<string> {
   let p = memo.get(key)
   if (!p) {
@@ -29,18 +29,18 @@ function generated(key: string, make: () => string): Promise<string> {
 }
 
 export const secrets = {
-  /** Firma de la cookie de sesión y del state de OAuth. */
+  /** Signs the session cookie and the OAuth state. */
   session: async () => process.env.SESSION_SECRET || generated("secret_session", () => randomBytes(32).toString("base64url")),
-  /** Cifra los tokens de Instagram guardados en la base: 32 bytes en base64. */
+  /** Encrypts the Instagram tokens stored in the database: 32 bytes in base64. */
   tokenEncKey: async () => process.env.TOKEN_ENC_KEY || generated("secret_token_key", () => randomBytes(32).toString("base64")),
-  /** Lo que se pega en «Token de verificación» del webhook en Meta. */
+  /** What goes in the webhook Verify token field in Meta. */
   webhookVerify: async () =>
     process.env.WEBHOOK_VERIFY_TOKEN?.trim() || generated("secret_webhook_verify", () => `fchat-${randomBytes(12).toString("hex")}`),
 }
 
 export type IgAppConfig = { appId: string; appSecret: string; source: "env" | "panel" }
 
-/** Identificador y clave secreta de la app de Instagram, o null si todavía no se cargaron. */
+/** Instagram app ID and secret, or null if they have not been set yet. */
 export async function igApp(): Promise<IgAppConfig | null> {
   const id = process.env.IG_APP_ID?.trim()
   const secret = process.env.IG_APP_SECRET?.trim()

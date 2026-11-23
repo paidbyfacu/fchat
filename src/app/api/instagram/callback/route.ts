@@ -7,8 +7,8 @@ import { httpInstagram } from "@/server/instagram"
 import { SESSION_COOKIE, sessionUser } from "@/server/session"
 import { seedDefaultAutomation } from "@/server/bootstrap"
 
-// Instagram vuelve acá con un code: code → token corto → token largo (60 días)
-// → /me → se guarda cifrado → se suscribe la cuenta a los webhooks.
+// Instagram comes back here with a code: code → short-lived token → 60-day token
+// → /me → stored encrypted → the account is subscribed to webhooks.
 export async function GET(req: NextRequest) {
   const back = (q: string) => NextResponse.redirect(new URL(`/conectar?${q}`, req.url))
   const q = req.nextUrl.searchParams
