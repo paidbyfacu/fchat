@@ -51,9 +51,29 @@ async function openPglite(dir: string): Promise<Db> {
   return wrap(pg, tx, exec)
 }
 
+/**
+ * Neon entrega la dirección con sslmode=require. node-postgres ya la trata como
+ * verify-full, pero lo avisa con un «SECURITY WARNING» en cada arranque, que en los
+ * Logs de Vercel sale en rojo como si fuera un error. Pedir verify-full es lo mismo
+ * que hace hoy y no deja ese aviso.
+ */
+export function pgConnectionString(url: string): string {
+  try {
+    const u = new URL(url)
+    const mode = u.searchParams.get("sslmode")
+    if (mode && ["prefer", "require", "verify-ca"].includes(mode) && !u.searchParams.has("uselibpqcompat")) {
+      u.searchParams.set("sslmode", "verify-full")
+      return u.toString()
+    }
+  } catch {
+    // no es una URL: se usa tal cual
+  }
+  return url
+}
+
 async function openPostgres(url: string): Promise<Db> {
   const { Pool } = await import("pg")
-  const pool = new Pool({ connectionString: url, max: 5 })
+  const pool = new Pool({ connectionString: pgConnectionString(url), max: 5 })
   const exec = async (sql: string) => {
     await pool.query(sql)
   }

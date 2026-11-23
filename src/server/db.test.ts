@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { migrate, openDb } from "./db"
+import { migrate, openDb, pgConnectionString } from "./db"
 
 let dir: string | undefined
 
@@ -28,5 +28,26 @@ describe("migraciones", () => {
     expect(cols.map((c) => c.column_name)).toEqual(["id", "nombre"])
     // y volver a migrar no hace nada
     expect(await migrate(db, dir)).toEqual([])
+  })
+})
+
+describe("dirección de Postgres", () => {
+  it("pide verify-full en lugar de require, sin tocar lo demás", () => {
+    const neon = "postgresql://usuario:cl%40ve@ep-ejemplo-pooler.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require"
+    const out = new URL(pgConnectionString(neon))
+    expect(out.searchParams.get("sslmode")).toBe("verify-full")
+    expect(out.searchParams.get("channel_binding")).toBe("require")
+    expect(out.password).toBe("cl%40ve")
+    expect(out.hostname).toBe("ep-ejemplo-pooler.us-east-1.aws.neon.tech")
+  })
+
+  it("deja igual lo que no hace falta cambiar", () => {
+    for (const url of [
+      "postgres://u:p@localhost:5432/db",
+      "postgres://u:p@host/db?sslmode=disable",
+      "postgres://u:p@host/db?sslmode=verify-full",
+      "postgres://u:p@host/db?uselibpqcompat=true&sslmode=require",
+    ])
+      expect(pgConnectionString(url)).toBe(url)
   })
 })
