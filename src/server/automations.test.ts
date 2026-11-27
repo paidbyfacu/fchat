@@ -199,6 +199,29 @@ describe("wizard → automation", () => {
     expect(r2.ok && r2.warnings).toEqual([])
   })
 
+  it("warns which one has priority when a post automation shares a keyword with a global one", async () => {
+    await saveAutomation(db, userId, null, wizard(accountId, { name: "Global", scope: "any", posts: [], include: ["guia"] }), true)
+    const post = await saveAutomation(db, userId, null, wizard(accountId, { name: "Del reel", include: ["Guía"] }), true)
+    expect(post.ok && post.warnings).toEqual([expect.stringContaining("En los posts que elegiste responde esta, no «Global»")])
+    const en = await saveAutomation(db, userId, null, wizard(accountId, { name: "Otra global", scope: "any", posts: [], include: ["la guia"] }), true, "en")
+    expect(en.ok && en.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("There “Del reel” has priority; on every other post this one replies.")]),
+    )
+    // and on that post the post's automation is the one that replies
+    await hook(comment("c1", "la guía", "p1"))
+    const [run] = await db.query<{ name: string }>(`select a.name from flow_runs r join automations a on a.id = r.automation_id`)
+    expect(run.name).toBe("Del reel")
+  })
+
+  it("a paused automation does not warn", async () => {
+    const g = await saveAutomation(db, userId, null, wizard(accountId, { name: "Global", scope: "any", posts: [] }), true)
+    if (!g.ok) throw new Error("did not publish")
+    await db.query(`update automations set status = 'stopped' where id = $1`, [g.id])
+    await db.query(`update triggers set is_active = false where automation_id = $1`, [g.id])
+    const post = await saveAutomation(db, userId, null, wizard(accountId, { name: "Del reel" }), true)
+    expect(post.ok && post.warnings).toEqual([])
+  })
+
   it("does not allow touching another user's automations and deletes your own", async () => {
     const r = await saveAutomation(db, userId, null, wizard(accountId), true)
     if (!r.ok) throw new Error("did not publish")

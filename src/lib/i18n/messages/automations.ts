@@ -332,6 +332,10 @@ export const wizard = defineMessages({
     errNextTaken: "Ya hay otra automatización activa esperando el próximo post. Solo puede haber una a la vez.",
     warnShared: "«{name}» también responde a {words}. Gana la que tiene palabras y, entre esas, la más vieja.",
     warnAny: "«{name}» responde a cualquier comentario en algunos de los mismos posts. La que tiene palabras va primero.",
+    warnPostWinsShared: "«{name}» también responde a {words}, en todos los posts. En los posts que elegiste responde esta, no «{name}».",
+    warnPostWinsAny: "«{name}» es para todos los posts y también podría responder aquí. En los posts que elegiste, esta tiene prioridad.",
+    warnGlobalLosesShared: "«{name}» también responde a {words}, en sus propios posts. Ahí tiene prioridad «{name}»; en el resto de los posts responde esta.",
+    warnGlobalLosesAny: "«{name}» es de posts concretos y coincide con esta. En sus posts tiene prioridad «{name}»; en el resto responde esta.",
   },
   en: {
     reply1: "I sent you a DM! 💌",
@@ -369,5 +373,9 @@ export const wizard = defineMessages({
     errNextTaken: "Another active automation is already waiting for the next post. Only one can wait at a time.",
     warnShared: "“{name}” also replies to {words}. The one with words wins and, among those, the oldest.",
     warnAny: "“{name}” replies to any comment on some of the same posts. The one with words goes first.",
+    warnPostWinsShared: "“{name}” also replies to {words}, on every post. On the posts you chose this one replies, not “{name}”.",
+    warnPostWinsAny: "“{name}” is for every post and could also reply here. On the posts you chose, this one has priority.",
+    warnGlobalLosesShared: "“{name}” also replies to {words}, on its own posts. There “{name}” has priority; on every other post this one replies.",
+    warnGlobalLosesAny: "“{name}” is for specific posts and overlaps with this one. On its posts “{name}” has priority; on the rest this one replies.",
   },
 })

@@ -6,6 +6,7 @@ import type { Db } from "./db"
 import { validateWizard, type Wizard, type WizardIssue } from "@/lib/wizard"
 import { fmt, quote, type Locale } from "@/lib/i18n/locale"
 import { getMessages } from "@/lib/i18n"
+import { matchesKeyword } from "@/lib/keywords"
 import { compileWizard, wizardFromGraph } from "./engine/compile"
 import type { Graph } from "./engine/graph"
 
@@ -89,27 +90,40 @@ export async function saveAutomation(db: Db, userId: string, id: string | null, 
   }
 }
 
-/** Other active automations of the same account that may reply to the same comment. */
+/**
+ * Other active automations of the same account that may reply to the same comment,
+ * and which one wins there, with the same rules as `matchTrigger` in the engine.
+ */
 async function conflicts(db: Db, id: string, locale: Locale): Promise<string[]> {
   const t = getMessages(locale).wizard
-  const rows = await db.query<{ name: string; shared: string[]; any_match: boolean }>(
-    `select a2.name,
-       array(select unnest(t1.keywords_include) intersect select unnest(t2.keywords_include)) shared,
-       (t1.match = 'any' or t2.match = 'any') any_match
+  type Row = { name: string; scope1: string; scope2: string; match1: string; match2: string; kw1: string[]; kw2: string[] }
+  const rows = await db.query<Row>(
+    `select a2.name, t1.post_scope scope1, t2.post_scope scope2, t1.match match1, t2.match match2,
+       t1.keywords_include kw1, t2.keywords_include kw2
      from triggers t1
      join triggers t2 on t2.ig_account_id = t1.ig_account_id and t2.automation_id <> t1.automation_id and t2.is_active
-     join automations a2 on a2.id = t2.automation_id
-     where t1.automation_id = $1
+     join automations a2 on a2.id = t2.automation_id and a2.status = 'live'
+     where t1.automation_id = $1 and t1.type = 'comment' and t2.type = 'comment'
        and (t1.post_scope <> 'specific' or t2.post_scope <> 'specific' or t1.media_ids && t2.media_ids)`,
     [id],
   )
-  return rows
-    .filter((r) => r.any_match || r.shared.length)
-    .map((r) =>
-      r.shared.length
-        ? fmt(t.warnShared, { name: r.name, words: r.shared.map((k) => quote(locale, k)).join(", ") })
-        : fmt(t.warnAny, { name: r.name }),
-    )
+  const isAny = (match: string, kw: string[]) => match === "any" || kw.length === 0
+  // two keywords overlap when a comment can fire both: "link" and "the link" do
+  const overlap = (a: string, b: string) => matchesKeyword(a, b) || matchesKeyword(b, a)
+  const out: string[] = []
+  for (const r of rows) {
+    const any1 = isAny(r.match1, r.kw1)
+    const any2 = isAny(r.match2, r.kw2)
+    const shared = any1 || any2 ? [] : r.kw1.filter((k) => r.kw2.some((k2) => overlap(k, k2)))
+    if (!any1 && !any2 && !shared.length) continue
+    const post1 = r.scope1 !== "any"
+    const post2 = r.scope2 !== "any"
+    const words = shared.map((k) => quote(locale, k)).join(", ")
+    if (post1 && !post2) out.push(fmt(shared.length ? t.warnPostWinsShared : t.warnPostWinsAny, { name: r.name, words }))
+    else if (!post1 && post2) out.push(fmt(shared.length ? t.warnGlobalLosesShared : t.warnGlobalLosesAny, { name: r.name, words }))
+    else out.push(shared.length ? fmt(t.warnShared, { name: r.name, words }) : fmt(t.warnAny, { name: r.name }))
+  }
+  return out
 }
 
 export async function deleteAutomation(db: Db, userId: string, id: string): Promise<boolean> {

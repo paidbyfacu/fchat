@@ -315,6 +315,8 @@ GitHub Actions is free in public repositories. In private ones, each run uses mi
 
 To finish it later, click **Save draft**.
 
+**When two automations could answer the same comment,** only one runs, so nobody gets two DMs. An automation for specific posts, or for the next post, beats one for any post: on those posts it answers its keywords, and every other comment still goes to the one for any post. Among automations with the same reach, the one with keywords beats the one for any comment, and then the oldest wins. Paused automations never get in the way. When you publish, FChat warns you about any overlap and tells you which one will answer.
+
 ### Step 7. Test it
 
 1. From your **second** Instagram account, comment the keyword on the post you chose, for example `link`. Comments from your own account do not trigger anything.

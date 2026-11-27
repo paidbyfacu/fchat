@@ -333,6 +333,169 @@ describe("engine", () => {
   })
 })
 
+describe("priority: a post's own automation beats a global one", () => {
+  let db: Db
+  let ig: ReturnType<typeof fakeInstagram>
+  let deps: EngineDeps
+  let accountId: string
+
+  type Auto = {
+    name: string
+    scope?: "any" | "specific" | "next"
+    media?: string[]
+    words?: string[]
+    exclude?: string[]
+    status?: "live" | "stopped" | "draft"
+  }
+
+  /** An automation whose first DM says its name, so the test can tell which one ran. */
+  async function auto({ name, scope = "any", media = [], words = [], exclude = [], status = "live" }: Auto) {
+    const graph = commentToDmGraph({
+      opening: name,
+      openingButton: "Sí",
+      followPrompt: "Seguime",
+      followedButton: "Listo",
+      linkText: "Link",
+      links: [{ title: "Abrir", url: "https://example.com" }],
+    })
+    const [a] = await db.query<{ id: string }>(
+      `insert into automations (ig_account_id, name, status) values ($1, $2, $3) returning id`,
+      [accountId, name, status],
+    )
+    const [v] = await db.query<{ id: string }>(`insert into automation_versions (automation_id, version, graph) values ($1, 1, $2) returning id`, [
+      a.id,
+      JSON.stringify(graph),
+    ])
+    await db.query(`update automations set live_version_id = $2 where id = $1`, [a.id, v.id])
+    await db.query(
+      `insert into triggers (automation_id, ig_account_id, type, post_scope, media_id, media_ids, keywords_include, keywords_exclude,
+         match, is_active, armed_at)
+       values ($1, $2, 'comment', $3, $4, $5, $6, $7, $8, $9, now() - interval '1 day')`,
+      [
+        a.id,
+        accountId,
+        scope,
+        scope === "next" ? media[0] ?? null : null,
+        scope === "specific" ? media : [],
+        words,
+        exclude,
+        words.length ? "contains" : "any",
+        status === "live",
+      ],
+    )
+    // created_at apart, so "the oldest" is unambiguous
+    await new Promise((r) => setTimeout(r, 5))
+  }
+
+  beforeEach(async () => {
+    db = await openDb({ pgliteDir: "memory://", url: "" })
+    ig = fakeInstagram(() => true)
+    deps = { db, ig: ig.ig, encKey: KEY }
+    const [u] = await db.query<{ id: string }>(`insert into users (email, password_hash) values ('yo@x.com', 'x') returning id`)
+    const [acc] = await db.query<{ id: string }>(
+      `insert into ig_accounts (user_id, ig_user_id, username, access_token_enc, token_expires_at)
+       values ($1, $2, 'micuenta', $3, now() + interval '50 days') returning id`,
+      [u.id, IG_ID, encrypt("token-de-prueba", KEY)],
+    )
+    accountId = acc.id
+  })
+
+  async function hook(body: unknown) {
+    await ingest(db, toIngestItems(body))
+    await processPending(deps)
+  }
+  const openings = () => ig.sent.map((s) => textOf(s.message))
+
+  it("1. same keyword on the post: only the post's flow runs, even if the global one is older", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Reel A", scope: "specific", media: ["reelA"], words: ["link"] })
+    await hook(commentHook("c1", "link", "u1", "reelA"))
+    expect(openings()).toEqual(["Reel A"])
+    const runs = await db.query(`select count(*)::int n from flow_runs`)
+    expect(runs[0].n).toBe(1)
+  })
+
+  it("1. a repeated comment on the post does not fall back to the global one: still a single DM", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Reel A", scope: "specific", media: ["reelA"], words: ["link"] })
+    await hook(commentHook("c1", "link", "u1", "reelA"))
+    await hook(commentHook("c2", "link otra vez", "u1", "reelA"))
+    expect(openings()).toEqual(["Reel A"])
+  })
+
+  it("1. also for a next-post automation once its post is assigned", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Próximo", scope: "next", media: ["reelN"], words: ["link"] })
+    await hook(commentHook("c1", "link", "u1", "reelN"))
+    expect(openings()).toEqual(["Próximo"])
+  })
+
+  it("2. on a post with its own automation, a keyword only the global one has fires the global one", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Reel A", scope: "specific", media: ["reelA"], words: ["guia"] })
+    await hook(commentHook("c1", "pásame el link", "u1", "reelA"))
+    await hook(commentHook("c2", "la guía", "u2", "reelA"))
+    expect(openings()).toEqual(["Global", "Reel A"])
+  })
+
+  it("2. a blocking word of the post's automation lets the global one reply", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Reel A", scope: "specific", media: ["reelA"], words: ["link"], exclude: ["precio"] })
+    await hook(commentHook("c1", "link y precio", "u1", "reelA"))
+    expect(openings()).toEqual(["Global"])
+  })
+
+  it("3. on posts without their own automation the global one works as before", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Reel A", scope: "specific", media: ["reelA"], words: ["link"] })
+    await hook(commentHook("c1", "link", "u1", "otroPost"))
+    await hook(commentHook("c2", "LINK", "u2", "reelB"))
+    expect(openings()).toEqual(["Global", "Global"])
+  })
+
+  it("4. priority uses the same comparison as firing: case, accents, punctuation and whole words", async () => {
+    await auto({ name: "Global", words: ["guia"] })
+    await auto({ name: "Reel A", scope: "specific", media: ["reelA"], words: ["Guía"] })
+    await hook(commentHook("c1", "¡Pásame la GUÍA, porfa!", "u1", "reelA"))
+    await hook(commentHook("c2", "  guia  ", "u2", "reelA"))
+    await hook(commentHook("c3", "guiado", "u3", "reelA"))
+    expect(openings()).toEqual(["Reel A", "Reel A"])
+  })
+
+  it("4. a post's automation for any comment also beats a global one with keywords", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Reel A", scope: "specific", media: ["reelA"] })
+    await hook(commentHook("c1", "link", "u1", "reelA"))
+    expect(openings()).toEqual(["Reel A"])
+  })
+
+  it("4. among global ones, keywords still beat any comment, and then the oldest", async () => {
+    await auto({ name: "Cualquiera" })
+    await auto({ name: "Global 1", words: ["link"] })
+    await auto({ name: "Global 2", words: ["link"] })
+    await hook(commentHook("c1", "link", "u1", "post1"))
+    await hook(commentHook("c2", "hola", "u2", "post1"))
+    expect(openings()).toEqual(["Global 1", "Cualquiera"])
+  })
+
+  it("5. a paused or unpublished post automation does not block the global one", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Pausada", scope: "specific", media: ["reelA"], words: ["link"], status: "stopped" })
+    await auto({ name: "Borrador", scope: "specific", media: ["reelB"], words: ["link"], status: "draft" })
+    await hook(commentHook("c1", "link", "u1", "reelA"))
+    await hook(commentHook("c2", "link", "u2", "reelB"))
+    expect(openings()).toEqual(["Global", "Global"])
+  })
+
+  it("5. a live automation whose trigger is turned off does not block the global one", async () => {
+    await auto({ name: "Global", words: ["link"] })
+    await auto({ name: "Reel A", scope: "specific", media: ["reelA"], words: ["link"] })
+    await db.query(`update triggers t set is_active = false from automations a where a.id = t.automation_id and a.name = 'Reel A'`)
+    await hook(commentHook("c1", "link", "u1", "reelA"))
+    expect(openings()).toEqual(["Global"])
+  })
+})
+
 describe("Meta signature", () => {
   it("accepts the right signature and rejects the rest", () => {
     const body = '{"object":"instagram"}'

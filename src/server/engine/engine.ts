@@ -204,22 +204,38 @@ async function publicReply(deps: EngineDeps, token: string, ceId: string, commen
   }
 }
 
+/**
+ * Priority between triggers that would all fire on the same comment, lowest first:
+ * 1. scope: a trigger tied to posts, "specific" or "next", beats one for any post;
+ * 2. keywords: a trigger with keywords beats one that takes any comment;
+ * 3. age: the oldest trigger wins.
+ * Only one trigger runs per comment, so the person never gets two DMs.
+ */
+export function triggerRank(t: Pick<Trigger, "post_scope" | "match" | "keywords_include">): number {
+  const scope = t.post_scope === "any" ? 1 : 0
+  const words = t.match === "any" || t.keywords_include.length === 0 ? 1 : 0
+  return scope * 2 + words
+}
+
+/** Whether a comment's text fires the trigger: the same comparison for firing and for priority. */
+export function textMatches(t: Pick<Trigger, "match" | "keywords_include" | "keywords_exclude">, text: string): boolean {
+  if (t.keywords_exclude.some((k) => matchesKeyword(text, k))) return false
+  if (t.match === "any" || t.keywords_include.length === 0) return true
+  return t.keywords_include.some((k) => matchesKeyword(text, k))
+}
+
 async function matchTrigger(deps: EngineDeps, account: Account, token: string, mediaId: string, text: string) {
+  // paused, stopped or unpublished automations are left out here, so they never block another one
   const triggers = await deps.db.query<Trigger>(
     `select t.* from triggers t join automations a on a.id = t.automation_id
      where t.ig_account_id = $1 and t.type = 'comment' and t.is_active and a.status = 'live'
-     order by t.created_at`,
+       and a.live_version_id is not null
+     order by t.created_at, t.id`,
     [account.id],
   )
-  const ok = (t: Trigger) => {
-    if (t.keywords_exclude.some((k) => matchesKeyword(text, k))) return false
-    if (t.match === "any" || t.keywords_include.length === 0) return true
-    return t.keywords_include.some((k) => matchesKeyword(text, k))
-  }
-  // first the ones with keywords, which are more specific, then the generic ones; within each group, the oldest
-  const ordered = [...triggers.filter((t) => t.keywords_include.length), ...triggers.filter((t) => !t.keywords_include.length)]
+  // sort is stable: within the same rank the query order, oldest first, is kept
+  const ordered = triggers.filter((t) => textMatches(t, text)).sort((a, b) => triggerRank(a) - triggerRank(b))
   for (const t of ordered) {
-    if (!ok(t)) continue
     if (t.post_scope === "specific" && !t.media_ids.includes(mediaId)) continue
     if (t.post_scope === "next") {
       if (t.media_id && t.media_id !== mediaId) continue
